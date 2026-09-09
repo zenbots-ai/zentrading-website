@@ -46,6 +46,7 @@
     <table class="bt-table">
       <thead>
         <tr>
+          <th class="col-num col-ref">#</th>
           <th class="col-text col-bot">Bot</th>
           <th class="col-text">Asset</th>
           <th class="col-text">Market</th>
@@ -204,7 +205,7 @@ function renderRows(values) {
     return;
   }
   empty.style.display = 'none';
-  rows.forEach((r) => {
+  rows.forEach((r, i) => {
     // Sheet columns: Bot(0) | Asset(1) | Market(2) | Direction(3) | Entry Param(4) | Trades(5) | Win Rate %(6) | Trade P&L $(7) | Financing $(8) | Net Profit $(9) | Return %(10) | Profit Factor(11) | Sharpe(12) | Max Drawdown %(13) | Date Run(14) | Notes(15)
     const bot      = r[0]  || '';
     const asset    = r[1]  || '';
@@ -231,6 +232,7 @@ function renderRows(values) {
     const shCls = isNaN(shN) ? 'bt-neutral' : (shN > 1 ? 'bt-pos' : (shN >= 0 ? 'bt-wr-neutral' : 'bt-neg'));
     body.insertAdjacentHTML('beforeend', `
       <tr>
+        <td class="col-num col-ref" style="color:#999999;font-size:11px">${i + 1}</td>
         <td class="col-text"><div class="bt-bot-name">${esc(bot)}</div></td>
         <td class="col-text bt-neutral">${esc(asset || '—')}</td>
         <td class="col-text bt-neutral">${esc(market || '—')}</td>

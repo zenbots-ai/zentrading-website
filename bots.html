@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Zen. · Bot Dashboard</title>
+<link rel="icon" href="assets/favicon.ico" sizes="any">
+<link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="assets/favicon-16x16.png">
+<link rel="apple-touch-icon" sizes="180x180" href="assets/apple-touch-icon.png">
+<link rel="apple-touch-icon" sizes="167x167" href="assets/apple-touch-icon-167x167.png">
+<link rel="apple-touch-icon" sizes="152x152" href="assets/apple-touch-icon-152x152.png">
+<link rel="apple-touch-icon" sizes="120x120" href="assets/apple-touch-icon-120x120.png">
+<link rel="manifest" href="site.webmanifest">
+<meta name="apple-mobile-web-app-title" content="Zen.">
+<meta name="application-name" content="Zen.">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#12141A">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<div class="page-loader" id="pageLoader">
+  <div class="loading-dots">
+    <div class="dot"></div>
+    <div class="dot"></div>
+    <div class="dot"></div>
+  </div>
+</div>
+
+<div class="tab-nav">
+  <a href="/" class="logo">Zen.</a>
+  <div class="tab-nav-tabs">
+    <button class="tab-btn active" onclick="switchTab('backtest',this)">Backtesting</button>
+    <button class="tab-btn" onclick="switchTab('paper',this)">Paper Trades</button>
+    <button class="tab-btn" onclick="switchTab('live',this)">Live Trades</button>
+  </div>
+  <button class="bt-add-btn" id="btRefreshBtn" onclick="refreshBacktest(true)">Refresh</button>
+</div>
+
+<div class="tab-panel active" id="tab-backtest">
+  <div class="bt-table-wrap">
+    <table class="bt-table">
+      <thead>
+        <tr>
+          <th class="col-num col-ref"></th>
+          <th class="col-text col-bot">Bot</th>
+          <th class="col-text col-status">Status</th>
+          <th class="col-text col-period">Period</th>
+          <th class="col-num">Total Return (%)</th>
+          <th class="col-num">Ann. Return (%)</th>
+          <th class="col-num">Win Rate (%)</th>
+          <th class="col-num">Sharpe</th>
+          <th class="col-num">Profit Factor</th>
+          <th class="col-num">Max Drawdown (%)</th>
+          <th class="col-num">Trades</th>
+          <th class="col-num col-notes">Notes</th>
+        </tr>
+      </thead>
+      <tbody id="btTableBody"></tbody>
+    </table>
+    <div class="bt-empty" id="btEmpty">No backtest results yet.</div>
+  </div>
+</div>
+
+<div class="tab-panel" id="tab-paper">
+  <div class="coming-soon">
+    <h3>Paper Trading</h3>
+    <p>Once a bot passes backtesting with a consistent edge, it moves here to run on live market data with fake money. This confirms the edge works in real conditions before risking real capital.</p>
+  </div>
+</div>
+
+<div class="tab-panel" id="tab-live">
+<div class="dash">
+  <div class="top-row" id="globalBar"></div>
+  <div class="controls">
+    <div class="period-group">
+      <button class="tbtn active" onclick="setRange('all',this)">All</button>
+      <button class="tbtn" onclick="setRange('y',this)">Y</button>
+      <button class="tbtn" onclick="setRange('m',this)">M</button>
+      <button class="tbtn" onclick="setRange('w',this)">W</button>
+      <button class="tbtn" onclick="setRange('d',this)">D</button>
+    </div>
+    <div class="live-toolbar-right">
+      <button class="tbtn" id="sortBtn" onclick="toggleSort()">Sort by Win Rate</button>
+    </div>
+  </div>
+  <div class="grid" id="botGrid"></div>
+</div>
+</div>
+
+<div class="popover-overlay" id="popoverOverlay" onclick="closePopover(event)">
+  <div class="popover" id="popover">
+    <div class="popover-header">
+      <div class="popover-title" id="popoverTitle"></div>
+      <button class="popover-close" onclick="closePopoverDirect()">✕</button>
+    </div>
+    <div id="popoverBody"></div>
+  </div>
+</div>
+
+<script>
+const SHEET_ID = '1dud-FOCKFuxc64JVYXJNtkUKBCZNOkz-3RXZzpgncWQ';
+const API_KEY = 'AIzaSyDryfSczB-VDV7bDLF-OVMe9q6itfH5RL8';
+const SHEET_TAB = 'Backtesting';
+
+function showPageLoader() {
+  const el = document.getElementById('pageLoader');
+  if (el) el.classList.remove('hidden');
+}
+
+function hidePageLoader() {
+  const el = document.getElementById('pageLoader');
+  if (el) el.classList.add('hidden');
+}
+
+function switchTab(tab, el) {
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('tab-' + tab).classList.add('active');
+  const refresh = document.getElementById('btRefreshBtn');
+  if (refresh) refresh.style.display = tab === 'backtest' ? '' : 'none';
+}
+
+function statusClass(status) {
+  const s = (status || '').toLowerCase();
+  if (s.includes('run')) return 'running';
+  if (s.includes('fail') || s.includes('error')) return 'fail';
+  if (s.includes('done') || s.includes('complete') || s.includes('pass')) return 'done';
+  return 'pending';
+}
+
+function numClass(val, invert) {
+  const n = parseFloat(String(val).replace(/[%£$,]/g, ''));
+  if (isNaN(n) || n === 0) return 'bt-neutral';
+  const pos = invert ? n < 0 : n > 0;
+  return pos ? 'bt-pos' : 'bt-neg';
+}
+
+function wrClass(val) {
+  const n = parseFloat(String(val).replace(/[%£$,]/g, ''));
+  if (isNaN(n)) return 'bt-wr-neutral';
+  if (n >= 55) return 'bt-wr-good';
+  if (n < 45) return 'bt-wr-bad';
+  return 'bt-wr-neutral';
+}
+
+function ddClass(val) {
+  const n = Math.abs(parseFloat(String(val).replace(/[%£$,]/g, '')));
+  if (isNaN(n)) return 'bt-neutral';
+  if (n < 10) return 'bt-pos';
+  if (n <= 20) return 'bt-wr-neutral';
+  return 'bt-neg';
+}
+
+function blank(val) {
+  const raw = String(val ?? '').trim();
+  return raw === '' || raw === '—' || raw === '-';
+}
+
+function formatUSD(val) {
+  if (blank(val)) return '—';
+  const raw = String(val).trim();
+  if (raw.includes('$')) return esc(raw);
+  const signed = raw.replace(/£/g, '');
+  if (/^-/.test(signed)) return `-$${esc(signed.replace(/^-/, ''))}`;
+  return `$${esc(signed)}`;
+}
+
+function formatPct(val) {
+  if (blank(val)) return '—';
+  const raw = String(val).trim();
+  if (raw.includes('%')) return esc(raw);
+  return `${esc(raw.replace(/[$£]/g, ''))}%`;
+}
+
+function esc(v) {
+  return String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+async function fetchSheetData() {
+  const url = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${SHEET_TAB}?key=${API_KEY}`;
+  const res = await fetch(url);
+  if (!res.ok) throw new Error('Sheet fetch failed');
+  const data = await res.json();
+  return data.values || [];
+}
+
+function renderRows(values) {
+  const body = document.getElementById('btTableBody');
+  const empty = document.getElementById('btEmpty');
+  body.innerHTML = '';
+  const rows = (values || []).slice(1).filter(r => r && r.some(c => String(c).trim()));
+  if (!rows.length) {
+    empty.style.display = 'block';
+    return;
+  }
+  empty.style.display = 'none';
+  rows.forEach((r, i) => {
+    // Sheet columns: Bot(0) | Status(1) | Asset(2) | Period(3) | Total Return %(4) | Annual Return %(5) | Win Rate %(6) | Sharpe(7) | Profit Factor(8) | Max Drawdown %(9) | Total Trades(10) | Avg Trade Duration(11) | Fees(12) | Notes(13) | Date Run(14)
+    const bot      = r[0]  || '';
+    const status   = r[1]  || '';
+    const asset    = r[2]  || '';
+    const period   = r[3]  || '';
+    const total    = r[4]  || '';
+    const ann      = r[5]  || '';
+    const wr       = r[6]  || '';
+    const sharpe   = r[7]  || '';
+    const pf       = r[8]  || '';
+    const dd       = r[9]  || '';
+    const trades   = r[10] || '';
+    const notes    = r[13] || '';
+    const dateRun  = r[14] || '';
+    const name = esc(bot);
+    const assetLine = asset ? `<div class="bt-bot-asset">${esc(asset)} · ${esc(dateRun)}</div>` : (dateRun ? `<div class="bt-bot-asset">${esc(dateRun)}</div>` : '');
+    body.insertAdjacentHTML('beforeend', `
+      <tr>
+        <td class="col-num col-ref">${i + 1}</td>
+        <td class="col-text"><div class="bt-bot-name">${name}</div>${assetLine}</td>
+        <td class="col-text"><span class="bt-status-badge ${statusClass(status)}">${esc(status || '—')}</span></td>
+        <td class="col-text bt-neutral">${esc(period || '—')}</td>
+        <td class="col-num ${numClass(total)}">${formatPct(total)}</td>
+        <td class="col-num ${numClass(ann)}">${formatPct(ann)}</td>
+        <td class="col-num ${wrClass(wr)}">${formatPct(wr)}</td>
+        <td class="col-num ${numClass(sharpe)}">${esc(sharpe || '—')}</td>
+        <td class="col-num ${numClass(pf)}">${esc(pf || '—')}</td>
+        <td class="col-num ${ddClass(dd)}">${formatPct(dd)}</td>
+        <td class="col-num bt-neutral">${esc(trades || '—')}</td>
+        <td class="col-num col-notes bt-neutral">${esc(notes || '')}</td>
+      </tr>
+    `);
+  });
+}
+
+async function renderBtTableFromSheet() {
+  const values = await fetchSheetData();
+  renderRows(values);
+}
+
+async function refreshBacktest(showLoader) {
+  if (showLoader) showPageLoader();
+  try {
+    await renderBtTableFromSheet();
+  } catch (e) {
+    document.getElementById('btEmpty').textContent = 'Could not load backtest results.';
+    document.getElementById('btEmpty').style.display = 'block';
+  } finally {
+    if (showLoader) hidePageLoader();
+  }
+}
+
+const BOT_NAMES = [
+  '20-day-highs-bot','fx-mean-reversion-bot','crypto-bot','daily-ema-pullback-bot','crypto-24h-bot',
+  '10-20-bot','rsi-2-bot','momentum-factor-bot','equity-milipede-bot','bollinger-squeeze-bot',
+  'opening-range-bot','dual-momentum-bot','gap-and-go-bot','52-week-high-bot','vix-reversal-bot',
+  'earnings-drift-bot','carry-trade-bot','volatility-breakout-bot','trend-following-bot','pairs-trading-bot'
+];
+
+const liveCharts = [];
+let liveRange = 'all';
+let sortByWinRate = false;
+
+function renderEmptyChart(canvas) {
+  if (typeof Chart === 'undefined') return;
+  liveCharts.push(new Chart(canvas, {
+    type: 'line',
+    data: {
+      labels: Array(24).fill(''),
+      datasets: [{
+        data: Array(24).fill(0),
+        borderColor: '#282A33',
+        borderWidth: 1.5,
+        pointRadius: 0,
+        fill: false,
+        tension: 0.3
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: false,
+      plugins: { legend: { display: false }, tooltip: { enabled: false } },
+      scales: { x: { display: false }, y: { display: false } }
+    }
+  }));
+}
+
+function renderLiveDashboard() {
+  liveCharts.forEach(c => c.destroy());
+  liveCharts.length = 0;
+
+  document.getElementById('globalBar').innerHTML = `
+    <div class="gcard"><div class="label">Total P&amp;L</div><div class="value">—</div></div>
+    <div class="gcard"><div class="label">Win Rate</div><div class="value">—</div></div>
+    <div class="gcard"><div class="label">Active Bots</div><div class="value">0</div></div>
+    <div class="gcard"><div class="label">Trades</div><div class="value">—</div></div>
+  `;
+
+  const names = sortByWinRate ? [...BOT_NAMES] : BOT_NAMES;
+  const grid = document.getElementById('botGrid');
+  grid.innerHTML = names.map((id, i) => `
+    <div class="bot-card">
+      <div class="bot-header">
+        <div class="bot-name">${id}</div>
+        <div class="hright">
+          <span class="status stopped">Stopped</span>
+          <button class="tbl-icon" onclick="openTrades(${i})" aria-label="Trades">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="3" y="3" width="18" height="18" rx="2"></rect>
+              <path d="M3 9h18M9 21V9"></path>
+            </svg>
+          </button>
+        </div>
+      </div>
+      <div class="pnl-row">
+        <div class="bot-pnl">—</div>
+        <div class="started">—</div>
+      </div>
+      <div class="bot-pct">—</div>
+      <div class="chart-wrap"><canvas id="liveChart${i}"></canvas></div>
+      <div class="bot-stats">
+        <table class="stat-table">
+          <tr>
+            <td class="stat-label" data-tip="Total return in USD">Total Return ($)</td>
+            <td class="stat-val">—</td>
+          </tr>
+          <tr>
+            <td class="stat-label" data-tip="Annualized return">Ann. Return (%)</td>
+            <td class="stat-val">—</td>
+          </tr>
+          <tr>
+            <td class="stat-label" data-tip="Winning trades divided by total trades">Win Rate (%)</td>
+            <td class="stat-val">—</td>
+          </tr>
+          <tr>
+            <td class="stat-label" data-tip="Risk-adjusted return">Sharpe</td>
+            <td class="stat-val">—</td>
+          </tr>
+          <tr>
+            <td class="stat-label" data-tip="Largest peak-to-trough decline">Max Drawdown (%)</td>
+            <td class="stat-val">—</td>
+          </tr>
+          <tr>
+            <td class="stat-label" data-tip="Closed trades in the selected period">Trades</td>
+            <td class="stat-val">—</td>
+          </tr>
+        </table>
+      </div>
+    </div>
+  `).join('');
+
+  names.forEach((_, i) => renderEmptyChart(document.getElementById('liveChart' + i)));
+}
+
+function setRange(range, el) {
+  liveRange = range;
+  document.querySelectorAll('.period-group .tbtn').forEach(b => b.classList.remove('active'));
+  if (el) el.classList.add('active');
+  renderLiveDashboard();
+}
+
+function toggleSort() {
+  sortByWinRate = !sortByWinRate;
+  const btn = document.getElementById('sortBtn');
+  if (btn) btn.textContent = sortByWinRate ? 'Default Order' : 'Sort by Win Rate';
+  renderLiveDashboard();
+}
+
+function openTrades(i) {
+  document.getElementById('popoverTitle').textContent = BOT_NAMES[i];
+  document.getElementById('popoverBody').innerHTML = `
+    <table>
+      <tr class="hdr"><td>Time</td><td>Side</td><td>P&amp;L</td></tr>
+      <tr><td colspan="3" class="popover-empty">No trades yet</td></tr>
+    </table>
+  `;
+  document.getElementById('popoverOverlay').classList.add('visible');
+}
+
+function closePopover(e) { if (e.target.id === 'popoverOverlay') closePopoverDirect(); }
+function closePopoverDirect() { document.getElementById('popoverOverlay').classList.remove('visible'); }
+
+renderLiveDashboard();
+refreshBacktest(true);
+setInterval(() => refreshBacktest(false), 60000);
+</script>
+</body>
+</html>

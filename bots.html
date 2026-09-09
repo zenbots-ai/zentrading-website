@@ -46,17 +46,21 @@
     <table class="bt-table">
       <thead>
         <tr>
-          <th class="col-num col-ref"></th>
           <th class="col-text col-bot">Bot</th>
-          <th class="col-text col-status">Status</th>
-          <th class="col-text col-period">Period</th>
-          <th class="col-num">Total Return (%)</th>
-          <th class="col-num">Ann. Return (%)</th>
-          <th class="col-num">Win Rate (%)</th>
-          <th class="col-num">Sharpe</th>
-          <th class="col-num">Profit Factor</th>
-          <th class="col-num">Max Drawdown (%)</th>
+          <th class="col-text">Asset</th>
+          <th class="col-text">Market</th>
+          <th class="col-text">Direction</th>
+          <th class="col-text">Entry Param</th>
           <th class="col-num">Trades</th>
+          <th class="col-num">Win Rate %</th>
+          <th class="col-num">Trade P&amp;L $</th>
+          <th class="col-num">Financing $</th>
+          <th class="col-num">Net Profit $</th>
+          <th class="col-num">Return %</th>
+          <th class="col-num">Profit Factor</th>
+          <th class="col-num">Sharpe</th>
+          <th class="col-num">Max Drawdown %</th>
+          <th class="col-text">Date Run</th>
           <th class="col-num col-notes">Notes</th>
         </tr>
       </thead>
@@ -200,36 +204,48 @@ function renderRows(values) {
     return;
   }
   empty.style.display = 'none';
-  rows.forEach((r, i) => {
-    // Sheet columns: Bot(0) | Status(1) | Asset(2) | Period(3) | Total Return %(4) | Annual Return %(5) | Win Rate %(6) | Sharpe(7) | Profit Factor(8) | Max Drawdown %(9) | Total Trades(10) | Avg Trade Duration(11) | Fees(12) | Notes(13) | Date Run(14)
+  rows.forEach((r) => {
+    // Sheet columns: Bot(0) | Asset(1) | Market(2) | Direction(3) | Entry Param(4) | Trades(5) | Win Rate %(6) | Trade P&L $(7) | Financing $(8) | Net Profit $(9) | Return %(10) | Profit Factor(11) | Sharpe(12) | Max Drawdown %(13) | Date Run(14) | Notes(15)
     const bot      = r[0]  || '';
-    const status   = r[1]  || '';
-    const asset    = r[2]  || '';
-    const period   = r[3]  || '';
-    const total    = r[4]  || '';
-    const ann      = r[5]  || '';
+    const asset    = r[1]  || '';
+    const market   = r[2]  || '';
+    const direction= r[3]  || '';
+    const entryP   = r[4]  || '';
+    const trades   = r[5]  || '';
     const wr       = r[6]  || '';
-    const sharpe   = r[7]  || '';
-    const pf       = r[8]  || '';
-    const dd       = r[9]  || '';
-    const trades   = r[10] || '';
-    const notes    = r[13] || '';
+    const tradePnl = r[7]  || '';
+    const financing= r[8]  || '';
+    const netPnl   = r[9]  || '';
+    const ret      = r[10] || '';
+    const pf       = r[11] || '';
+    const sharpe   = r[12] || '';
+    const dd       = r[13] || '';
     const dateRun  = r[14] || '';
-    const name = esc(bot);
-    const assetLine = asset ? `<div class="bt-bot-asset">${esc(asset)} · ${esc(dateRun)}</div>` : (dateRun ? `<div class="bt-bot-asset">${esc(dateRun)}</div>` : '');
+    const notes    = r[15] || '';
+    const parseN = (val) => parseFloat(String(val).replace(/[%£$,]/g, ''));
+    const wrN = parseN(wr);
+    const wrCls = isNaN(wrN) ? 'bt-neutral' : (wrN > 60 ? 'bt-pos' : (wrN >= 50 ? 'bt-wr-neutral' : 'bt-neg'));
+    const pfN = parseN(pf);
+    const pfCls = isNaN(pfN) ? 'bt-neutral' : (pfN > 1.5 ? 'bt-pos' : (pfN >= 1 ? 'bt-wr-neutral' : 'bt-neg'));
+    const shN = parseN(sharpe);
+    const shCls = isNaN(shN) ? 'bt-neutral' : (shN > 1 ? 'bt-pos' : (shN >= 0 ? 'bt-wr-neutral' : 'bt-neg'));
     body.insertAdjacentHTML('beforeend', `
       <tr>
-        <td class="col-num col-ref">${i + 1}</td>
-        <td class="col-text"><div class="bt-bot-name">${name}</div>${assetLine}</td>
-        <td class="col-text"><span class="bt-status-badge ${statusClass(status)}">${esc(status || '—')}</span></td>
-        <td class="col-text bt-neutral">${esc(period || '—')}</td>
-        <td class="col-num ${numClass(total)}">${formatPct(total)}</td>
-        <td class="col-num ${numClass(ann)}">${formatPct(ann)}</td>
-        <td class="col-num ${wrClass(wr)}">${formatPct(wr)}</td>
-        <td class="col-num ${numClass(sharpe)}">${esc(sharpe || '—')}</td>
-        <td class="col-num ${numClass(pf)}">${esc(pf || '—')}</td>
-        <td class="col-num ${ddClass(dd)}">${formatPct(dd)}</td>
+        <td class="col-text"><div class="bt-bot-name">${esc(bot)}</div></td>
+        <td class="col-text bt-neutral">${esc(asset || '—')}</td>
+        <td class="col-text bt-neutral">${esc(market || '—')}</td>
+        <td class="col-text bt-neutral">${esc(direction || '—')}</td>
+        <td class="col-text bt-neutral">${esc(entryP || '—')}</td>
         <td class="col-num bt-neutral">${esc(trades || '—')}</td>
+        <td class="col-num ${wrCls}">${formatPct(wr)}</td>
+        <td class="col-num bt-neutral">${formatUSD(tradePnl)}</td>
+        <td class="col-num bt-neutral">${formatUSD(financing)}</td>
+        <td class="col-num ${numClass(netPnl)}">${formatUSD(netPnl)}</td>
+        <td class="col-num ${numClass(ret)}">${formatPct(ret)}</td>
+        <td class="col-num ${pfCls}">${esc(pf || '—')}</td>
+        <td class="col-num ${shCls}">${esc(sharpe || '—')}</td>
+        <td class="col-num ${ddClass(dd)}">${formatPct(dd)}</td>
+        <td class="col-text bt-neutral">${esc(dateRun || '—')}</td>
         <td class="col-num col-notes bt-neutral">${esc(notes || '')}</td>
       </tr>
     `);

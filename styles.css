@@ -1886,8 +1886,12 @@ body:has(.nav) {
 .bt-table-wrap {
   padding: 20px;
   overflow-x: auto;
+  scrollbar-width: none;
   -webkit-overflow-scrolling: touch;
   padding-top: 0;
+}
+.bt-table-wrap::-webkit-scrollbar {
+  display: none;
 }
 .bt-table {
   width: 100%;

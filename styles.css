@@ -1435,7 +1435,7 @@ body:has(.nav) {
 .top-row {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 10px;
+  gap: 12px;
 }
 .gcard {
   background: #1D1F28;
@@ -1526,7 +1526,7 @@ body:has(.nav) {
 .grid {
   display: grid;
   grid-template-columns: repeat(5, 1fr);
-  gap: 10px;
+  gap: 12px;
 }
 .bot-card {
   background: #1D1F28;

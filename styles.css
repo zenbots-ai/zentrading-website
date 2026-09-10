@@ -1906,6 +1906,10 @@ body:has(#tab-backtest.active) {
   padding: 20px;
   box-sizing: border-box;
 }
+.bt-table-scroll {
+  border: 1px solid #282A33;
+  border-radius: 10px;
+}
 .bt-table {
   width: 100%;
   min-width: 1080px;
@@ -1917,8 +1921,6 @@ body:has(#tab-backtest.active) {
   border-collapse: separate;
   border-spacing: 0;
   font-size: 12px;
-  border: 1px solid #282A33;
-  border-radius: 10px;
 }
 .bt-table thead {
   flex: 0 0 auto;

@@ -1824,6 +1824,23 @@ body:has(.nav) {
 .tab-panel.active {
   display: block;
 }
+body:has(#tab-backtest.active) {
+  height: 100vh;
+  max-height: 100vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+.bt-header {
+  flex-shrink: 0;
+}
+#tab-backtest.tab-panel.active {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
 .bt-add-btn {
   grid-column: 3;
   justify-self: end;
@@ -1885,10 +1902,12 @@ body:has(.nav) {
 }
 .bt-table-wrap {
   padding: 20px;
-  overflow-x: auto;
+  padding-top: 0;
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
   scrollbar-width: none;
   -webkit-overflow-scrolling: touch;
-  padding-top: 0;
 }
 .bt-table-wrap::-webkit-scrollbar {
   display: none;
@@ -1914,7 +1933,7 @@ body:has(.nav) {
   white-space: nowrap;
   position: sticky;
   top: 0;
-  z-index: 1;
+  z-index: 2;
 }
 .bt-table td {
   padding: 10px 14px;

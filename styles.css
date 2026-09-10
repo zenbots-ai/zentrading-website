@@ -1470,7 +1470,7 @@ body:has(.nav) {
 .period-group {
   display: flex;
   align-items: center;
-  gap: 7px;
+  gap: 10px;
 }
 .period-group span {
   font-size: 14px;
@@ -1829,7 +1829,7 @@ body:has(.nav) {
   justify-self: end;
   display: flex;
   align-items: center;
-  gap: 15px;
+  gap: 10px;
   position: relative;
 }
 .bt-info-popover {

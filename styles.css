@@ -1839,6 +1839,8 @@ body:has(#tab-backtest.active) {
   flex-direction: column;
   flex: 1;
   min-height: 0;
+  height: calc(100vh - 87.2px);
+  max-height: calc(100vh - 87.2px);
   overflow: hidden;
 }
 .bt-add-btn {
@@ -1905,9 +1907,20 @@ body:has(#tab-backtest.active) {
   padding-top: 0;
   flex: 1;
   min-height: 0;
+  height: 100%;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+.bt-table-scroll {
+  flex: 1;
+  min-height: 0;
   overflow: auto;
   scrollbar-width: none;
   -webkit-overflow-scrolling: touch;
+}
+.bt-table-scroll::-webkit-scrollbar {
+  display: none;
 }
 .bt-table-wrap::-webkit-scrollbar {
   display: none;
@@ -2083,6 +2096,10 @@ body:has(#tab-backtest.active) {
     align-items: center;
     row-gap: 8px;
     padding: 20px;
+  }
+  #tab-backtest.tab-panel.active {
+    height: calc(100vh - 140px);
+    max-height: calc(100vh - 140px);
   }
   .tab-nav .logo {
     grid-column: 1;

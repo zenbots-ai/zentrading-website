@@ -1824,6 +1824,21 @@ body:has(.nav) {
 .tab-panel.active {
   display: block;
 }
+.bt-header {
+  grid-column: 3;
+  justify-self: end;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+#btMarketFilter {
+  background: #1D1F28;
+  border: 1px solid #282A33;
+  color: #FFFFF2;
+  font-size: 12px;
+  border-radius: 6px;
+  padding: 6px 10px;
+}
 .bt-add-btn {
   grid-column: 3;
   justify-self: end;
@@ -2069,6 +2084,11 @@ body:has(.nav) {
     grid-column: 1;
     grid-row: 1;
   }
+  .bt-header {
+    grid-column: 2;
+    grid-row: 1;
+    justify-self: end;
+  }
   .bt-add-btn {
     grid-column: 2;
     grid-row: 1;
@@ -2112,6 +2132,9 @@ body:has(.nav) {
   }
   .tab-nav .logo {
     margin-left: 20px;
+  }
+  .bt-header {
+    margin-right: 20px;
   }
   .bt-add-btn {
     margin-right: 20px;

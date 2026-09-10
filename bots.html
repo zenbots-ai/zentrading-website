@@ -38,7 +38,17 @@
     <button class="tab-btn" onclick="switchTab('paper',this)">Paper Trades</button>
     <button class="tab-btn" onclick="switchTab('live',this)">Live Trades</button>
   </div>
-  <button class="bt-add-btn" id="btRefreshBtn" onclick="refreshBacktest(true)">Refresh</button>
+  <div class="bt-header" id="btHeader">
+    <select id="btMarketFilter" onchange="onMarketFilterChange()">
+      <option value="All Markets">All Markets</option>
+      <option value="Forex" selected>Forex</option>
+      <option value="Equity">Equity</option>
+      <option value="Crypto">Crypto</option>
+      <option value="ETF">ETF</option>
+      <option value="Commodities">Commodities</option>
+    </select>
+    <button class="bt-add-btn" id="btRefreshBtn" onclick="refreshBacktest(true)">Refresh</button>
+  </div>
 </div>
 
 <div class="tab-panel active" id="tab-backtest">
@@ -127,8 +137,8 @@ function switchTab(tab, el) {
   document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
   el.classList.add('active');
   document.getElementById('tab-' + tab).classList.add('active');
-  const refresh = document.getElementById('btRefreshBtn');
-  if (refresh) refresh.style.display = tab === 'backtest' ? '' : 'none';
+  const header = document.getElementById('btHeader');
+  if (header) header.style.display = tab === 'backtest' ? '' : 'none';
 }
 
 function statusClass(status) {
@@ -195,11 +205,21 @@ async function fetchSheetData() {
   return data.values || [];
 }
 
+let btSheetValues = [];
+
+function onMarketFilterChange() {
+  renderRows(btSheetValues);
+}
+
 function renderRows(values) {
   const body = document.getElementById('btTableBody');
   const empty = document.getElementById('btEmpty');
   body.innerHTML = '';
-  const rows = (values || []).slice(1).filter(r => r && r.some(c => String(c).trim()));
+  const marketFilter = (document.getElementById('btMarketFilter') || {}).value || 'Forex';
+  let rows = (values || []).slice(1).filter(r => r && r.some(c => String(c).trim()));
+  if (marketFilter !== 'All Markets') {
+    rows = rows.filter(r => String(r[2] || '').trim() === marketFilter);
+  }
   if (!rows.length) {
     empty.style.display = 'block';
     return;
@@ -256,6 +276,7 @@ function renderRows(values) {
 
 async function renderBtTableFromSheet() {
   const values = await fetchSheetData();
+  btSheetValues = values;
   renderRows(values);
 }
 

@@ -1837,10 +1837,9 @@ body:has(.nav) {
   border: 2px solid #282A33;
   border-radius: 8px;
   background: transparent;
-  color: #999999;
   cursor: pointer;
   font-weight: 600;
-  transition: all 0.15s;
+  transition: 0.1s;
   appearance: none;
   -webkit-appearance: none;
   outline: none;

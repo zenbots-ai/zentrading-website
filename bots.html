@@ -44,6 +44,7 @@
       <option value="All Markets">All Markets</option>
       <option value="Forex" selected>Forex</option>
       <option value="ETF">ETF</option>
+      <option value="Indices">Indices</option>
       <option value="Commodities">Commodities</option>
       <option value="Equity">Equity</option>
       <option value="Crypto">Crypto</option>
@@ -196,6 +197,15 @@ function formatUSD(val) {
   return `$${formatted}`;
 }
 
+function formatNetProfit(val) {
+  if (blank(val)) return '—';
+  const n = parseFloat(String(val).replace(/[%£$,]/g, ''));
+  if (isNaN(n)) return esc(val);
+  const [whole, dec] = Math.abs(n).toFixed(2).split('.');
+  const formatted = Number(whole).toLocaleString('en-GB') + '.' + dec;
+  return `${n < 0 ? '-' : ''}$${formatted}`;
+}
+
 function formatPct(val) {
   if (blank(val)) return '—';
   const raw = String(val).trim();
@@ -290,7 +300,7 @@ function renderRows(values) {
         <td class="col-text bt-neutral">${esc(direction || '—')}</td>
         <td class="col-text bt-neutral">${esc(entryP || '—')}</td>
         <td class="col-num bt-neutral">${formatNumber(trades)}</td>
-        <td class="col-num ${numClass(netPnl)}">${formatUSD(netPnl)}</td>
+        <td class="col-num ${numClass(netPnl)}">${formatNetProfit(netPnl)}</td>
         <td class="col-num ${wrCls}">${formatPct(wr)}</td>
         <td class="col-num bt-neutral">${formatUSD(tradePnl)}</td>
         <td class="col-num bt-neutral">${formatUSD(financing)}</td>

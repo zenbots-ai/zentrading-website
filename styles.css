@@ -1829,15 +1829,25 @@ body:has(.nav) {
   justify-self: end;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 15px;
 }
 #btMarketFilter {
+  font-size: 13px;
+  padding: 6px 16px;
+  border: 2px solid #282A33;
+  border-radius: 8px;
+  background: transparent;
+  color: #999999;
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.15s;
+  appearance: none;
+  -webkit-appearance: none;
+  outline: none;
+}
+#btMarketFilter:hover {
   background: #1D1F28;
-  border: 1px solid #282A33;
   color: #FFFFF2;
-  font-size: 12px;
-  border-radius: 6px;
-  padding: 6px 10px;
 }
 .bt-add-btn {
   grid-column: 3;

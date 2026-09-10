@@ -42,10 +42,10 @@
     <select id="btMarketFilter" onchange="onMarketFilterChange()">
       <option value="All Markets">All Markets</option>
       <option value="Forex" selected>Forex</option>
-      <option value="Equity">Equity</option>
-      <option value="Crypto">Crypto</option>
       <option value="ETF">ETF</option>
       <option value="Commodities">Commodities</option>
+      <option value="Equity">Equity</option>
+      <option value="Crypto">Crypto</option>
     </select>
     <button class="bt-add-btn" id="btRefreshBtn" onclick="refreshBacktest(true)">Refresh</button>
   </div>
@@ -207,7 +207,23 @@ async function fetchSheetData() {
 
 let btSheetValues = [];
 
+function sizeMarketFilter() {
+  const sel = document.getElementById('btMarketFilter');
+  if (!sel || !sel.options[sel.selectedIndex]) return;
+  const span = document.createElement('span');
+  const cs = getComputedStyle(sel);
+  span.style.cssText = 'position:absolute;left:-9999px;visibility:hidden;white-space:nowrap;';
+  span.style.font = cs.font;
+  span.style.letterSpacing = cs.letterSpacing;
+  span.textContent = sel.options[sel.selectedIndex].text;
+  document.body.appendChild(span);
+  const extra = parseFloat(cs.paddingLeft) + parseFloat(cs.paddingRight) + parseFloat(cs.borderLeftWidth) + parseFloat(cs.borderRightWidth);
+  sel.style.width = Math.ceil(span.offsetWidth + extra) + 'px';
+  span.remove();
+}
+
 function onMarketFilterChange() {
+  sizeMarketFilter();
   renderRows(btSheetValues);
 }
 
@@ -424,6 +440,7 @@ function closePopover(e) { if (e.target.id === 'popoverOverlay') closePopoverDir
 function closePopoverDirect() { document.getElementById('popoverOverlay').classList.remove('visible'); }
 
 renderLiveDashboard();
+sizeMarketFilter();
 refreshBacktest(true);
 setInterval(() => refreshBacktest(false), 60000);
 </script>

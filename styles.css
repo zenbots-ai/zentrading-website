@@ -1830,6 +1830,33 @@ body:has(.nav) {
   display: flex;
   align-items: center;
   gap: 15px;
+  position: relative;
+}
+.bt-info-popover {
+  display: none;
+  background: #1D1F28;
+  border: 0.5px solid #282A33;
+  border-radius: 8px;
+  padding: 12px 16px;
+  font-size: 12px;
+  max-width: 280px;
+  position: absolute;
+  z-index: 100;
+  top: calc(100% + 8px);
+  right: 0;
+}
+.bt-info-popover.visible {
+  display: block;
+}
+#btInfoBtn,
+#btRefreshBtn {
+  padding-top: 4px;
+  padding-bottom: 4px;
+}
+#btInfoBtn i,
+#btRefreshBtn i {
+  font-size: 18px;
+  line-height: 1;
 }
 #btMarketFilter {
   font-size: 13px;
@@ -1913,6 +1940,12 @@ body:has(.nav) {
   scrollbar-width: none;
   -webkit-overflow-scrolling: touch;
   padding-top: 0;
+}
+.bt-table-scroll {
+  transition: opacity 0.15s;
+}
+.bt-table-scroll.is-loading {
+  opacity: 0.3;
 }
 .bt-table-wrap::-webkit-scrollbar {
   display: none;

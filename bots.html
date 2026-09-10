@@ -180,13 +180,20 @@ function blank(val) {
   return raw === '' || raw === '—' || raw === '-';
 }
 
+function formatNumber(val) {
+  if (blank(val)) return '—';
+  const n = parseFloat(String(val).replace(/[%£$,]/g, ''));
+  if (isNaN(n)) return esc(val);
+  return n.toLocaleString('en-GB');
+}
+
 function formatUSD(val) {
   if (blank(val)) return '—';
-  const raw = String(val).trim();
-  if (raw.includes('$')) return esc(raw);
-  const signed = raw.replace(/£/g, '');
-  if (/^-/.test(signed)) return `-$${esc(signed.replace(/^-/, ''))}`;
-  return `$${esc(signed)}`;
+  const n = parseFloat(String(val).replace(/[%£$,]/g, ''));
+  if (isNaN(n)) return esc(val);
+  const formatted = formatNumber(val);
+  if (n < 0) return `-$${formatted.replace(/^-/, '')}`;
+  return `$${formatted}`;
 }
 
 function formatPct(val) {
@@ -282,7 +289,7 @@ function renderRows(values) {
         <td class="col-text bt-neutral">${esc(market || '—')}</td>
         <td class="col-text bt-neutral">${esc(direction || '—')}</td>
         <td class="col-text bt-neutral">${esc(entryP || '—')}</td>
-        <td class="col-num bt-neutral">${esc(trades || '—')}</td>
+        <td class="col-num bt-neutral">${formatNumber(trades)}</td>
         <td class="col-num ${numClass(netPnl)}">${formatUSD(netPnl)}</td>
         <td class="col-num ${wrCls}">${formatPct(wr)}</td>
         <td class="col-num bt-neutral">${formatUSD(tradePnl)}</td>

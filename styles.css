@@ -1470,7 +1470,7 @@ body:has(.nav) {
 .period-group {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
 }
 .period-group span {
   font-size: 14px;
@@ -1526,7 +1526,7 @@ body:has(.nav) {
 .grid {
   display: grid;
   grid-template-columns: repeat(5, 1fr);
-  gap: 8px;
+  gap: 10px;
 }
 .bot-card {
   background: #1D1F28;
@@ -1829,7 +1829,7 @@ body:has(.nav) {
   justify-self: end;
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
   position: relative;
 }
 .bt-info-popover {

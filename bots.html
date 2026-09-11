@@ -49,6 +49,7 @@
       <option value="Equity">Equity</option>
       <option value="Crypto">Crypto</option>
     </select>
+    <button class="tbtn" id="btExportBtn" onclick="exportBacktestCsv()" title="Export CSV"><i class="ri-download-2-line"></i></button>
     <button class="tbtn" id="btInfoBtn"><i class="ri-information-line"></i></button>
     <button class="bt-add-btn" id="btRefreshBtn" onclick="refreshBacktest(true)"><i class="ri-refresh-line"></i></button>
     <div class="bt-info-popover" id="btInfoPopover">All backtests use a starting capital of £10,000. Results use OANDA data from Jan 2025. A result is only considered statistically valid if it passes: t-stat > 3.0 (accounts for 93+ parameter combinations tested), minimum 100 trades, Sharpe > 1.0 after costs, max drawdown < 20%, and at least 60% of walk-forward folds profitable. Rows with fewer than 100 trades are flagged as statistically insufficient.</div>
@@ -246,6 +247,34 @@ function sizeMarketFilter() {
 function onMarketFilterChange() {
   sizeMarketFilter();
   renderRows(btSheetValues);
+}
+
+function csvCell(val) {
+  const s = String(val ?? '');
+  if (/[",\n\r]/.test(s)) return `"${s.replace(/"/g, '""')}"`;
+  return s;
+}
+
+function exportBacktestCsv() {
+  const table = document.querySelector('#tab-backtest .bt-table');
+  if (!table) return;
+  const headers = [...table.querySelectorAll('thead th')].map(th =>
+    th.textContent.replace(/\s+/g, ' ').trim()
+  );
+  const bodyRows = [...table.querySelectorAll('tbody tr')].map(tr =>
+    [...tr.querySelectorAll('td')].map(td => td.innerText.replace(/\s+/g, ' ').trim())
+  );
+  const csv = [headers, ...bodyRows].map(row => row.map(csvCell).join(',')).join('\r\n');
+  const market = (document.getElementById('btMarketFilter') || {}).value || 'all';
+  const slug = String(market).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'all';
+  const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `zen-backtesting-${slug}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(a.href);
 }
 
 function renderRows(values) {

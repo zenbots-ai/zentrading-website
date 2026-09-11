@@ -75,6 +75,7 @@
           <th class="col-num">Profit Factor</th>
           <th class="col-num">Sharpe</th>
           <th class="col-num">Max Drawdown %</th>
+          <th class="col-text">Years</th>
           <th class="col-text">Date Run</th>
           <th class="col-num col-notes">Notes</th>
         </tr>
@@ -267,7 +268,7 @@ function renderRows(values) {
   }
   empty.style.display = 'none';
   rows.forEach((r, i) => {
-    // Sheet columns: Bot(0) | Asset(1) | Market(2) | Direction(3) | Entry Param(4) | Trades(5) | Win Rate %(6) | Trade P&L $(7) | Financing $(8) | Net Profit $(9) | Return %(10) | Profit Factor(11) | Sharpe(12) | Max Drawdown %(13) | Date Run(14) | Notes(15)
+    // Sheet columns: Bot(0) | Asset(1) | Market(2) | Direction(3) | Entry Param(4) | Trades(5) | Win Rate %(6) | Trade P&L $(7) | Financing $(8) | Net Profit $(9) | Return %(10) | Profit Factor(11) | Sharpe(12) | Max Drawdown %(13) | Years(14) | Date Run(15) | Notes(16)
     const bot      = r[0]  || '';
     const asset    = r[1]  || '';
     const market   = r[2]  || '';
@@ -282,8 +283,9 @@ function renderRows(values) {
     const pf       = r[11] || '';
     const sharpe   = r[12] || '';
     const dd       = r[13] || '';
-    const dateRun  = r[14] || '';
-    const notes    = r[15] || '';
+    const years    = r[14] || '';
+    const dateRun  = r[15] || '';
+    const notes    = r[16] || '';
     const parseN = (val) => parseFloat(String(val).replace(/[%£$,]/g, ''));
     const wrN = parseN(wr);
     const wrCls = isNaN(wrN) ? 'bt-neutral' : (wrN > 60 ? 'bt-pos' : (wrN >= 50 ? 'bt-wr-neutral' : 'bt-neg'));
@@ -308,6 +310,7 @@ function renderRows(values) {
         <td class="col-num ${pfCls}">${esc(pf || '—')}</td>
         <td class="col-num ${shCls}">${esc(sharpe || '—')}</td>
         <td class="col-num ${ddClass(dd)}">${formatPct(dd)}</td>
+        <td class="col-text bt-neutral">${esc(years)}</td>
         <td class="col-text bt-neutral">${esc(dateRun || '—')}</td>
         <td class="col-num col-notes bt-neutral">${esc(notes || '')}</td>
       </tr>

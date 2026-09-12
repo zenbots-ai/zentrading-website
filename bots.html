@@ -50,6 +50,7 @@
       <option value="Crypto">Crypto</option>
       <option value="Test Bots">Test Bots</option>
     </select>
+    <button class="tbtn" id="btSortBtn" onclick="toggleBacktestSort()" title="Sorting by Net Profit $"><i class="ri-sort-asc"></i><span id="btSortLabel">Net Profit $</span></button>
     <button class="tbtn" id="btExportBtn" onclick="exportBacktestCsv()" title="Export CSV"><i class="ri-download-2-line"></i></button>
     <button class="tbtn" id="btInfoBtn"><i class="ri-information-line"></i></button>
     <button class="bt-add-btn" id="btRefreshBtn" onclick="refreshBacktest(true)"><i class="ri-refresh-line"></i></button>
@@ -277,6 +278,7 @@ let btFilteredRows = [];
 let btVisibleCount = 0;
 let btColIx = null;
 let btSheetHeaders = [];
+let btSortBy = 'netPnl';
 
 function sizeMarketFilter() {
   const sel = document.getElementById('btMarketFilter');
@@ -295,6 +297,24 @@ function sizeMarketFilter() {
 
 function onMarketFilterChange() {
   sizeMarketFilter();
+  renderRows(btSheetValues);
+}
+
+function syncSortButton() {
+  const btn = document.getElementById('btSortBtn');
+  const label = document.getElementById('btSortLabel');
+  const sharpe = btSortBy === 'sharpe';
+  if (label) label.textContent = sharpe ? 'Sharpe' : 'Net Profit $';
+  if (btn) {
+    btn.classList.toggle('active', sharpe);
+    btn.title = sharpe ? 'Sorting by Sharpe' : 'Sorting by Net Profit $';
+    btn.setAttribute('aria-pressed', sharpe ? 'true' : 'false');
+  }
+}
+
+function toggleBacktestSort() {
+  btSortBy = btSortBy === 'sharpe' ? 'netPnl' : 'sharpe';
+  syncSortButton();
   renderRows(btSheetValues);
 }
 
@@ -478,9 +498,10 @@ function renderRows(values) {
       rows = rows.filter(r => String(cell(r, ix.market)).trim() === marketFilter);
     }
   }
+  const sortIx = btSortBy === 'sharpe' ? ix.sharpe : ix.netPnl;
   rows.sort((a, b) => {
-    const an = parseFloat(String(cell(a, ix.netPnl)).replace(/[%£$,]/g, ''));
-    const bn = parseFloat(String(cell(b, ix.netPnl)).replace(/[%£$,]/g, ''));
+    const an = parseFloat(String(cell(a, sortIx)).replace(/[%£$,]/g, ''));
+    const bn = parseFloat(String(cell(b, sortIx)).replace(/[%£$,]/g, ''));
     return (isNaN(bn) ? -Infinity : bn) - (isNaN(an) ? -Infinity : an);
   });
   btSheetHeaders = headers;
@@ -666,6 +687,7 @@ document.getElementById('btInfoBtn')?.addEventListener('click', toggleBtInfo);
 
 renderLiveDashboard();
 sizeMarketFilter();
+syncSortButton();
 refreshBacktest(true);
 setInterval(() => refreshBacktest(false), 60000);
 </script>

@@ -48,6 +48,7 @@
       <option value="Commodities">Commodities</option>
       <option value="Equity">Equity</option>
       <option value="Crypto">Crypto</option>
+      <option value="Test Bots">Test Bots</option>
     </select>
     <button class="tbtn" id="btExportBtn" onclick="exportBacktestCsv()" title="Export CSV"><i class="ri-download-2-line"></i></button>
     <button class="tbtn" id="btInfoBtn"><i class="ri-information-line"></i></button>
@@ -468,8 +469,14 @@ function renderRows(values) {
   let rows = (values || []).slice(1).filter(r => r && r.some(c => String(c).trim()));
   const headers = (values || [])[0] || [];
   const ix = backtestColIndex(headers);
-  if (marketFilter !== 'All Markets') {
-    rows = rows.filter(r => String(cell(r, ix.market)).trim() === marketFilter);
+  const isTestBot = (r) => String(cell(r, ix.bot) || '').trim().endsWith('-TEST');
+  if (marketFilter === 'Test Bots') {
+    rows = rows.filter(isTestBot);
+  } else {
+    rows = rows.filter(r => !isTestBot(r));
+    if (marketFilter !== 'All Markets') {
+      rows = rows.filter(r => String(cell(r, ix.market)).trim() === marketFilter);
+    }
   }
   rows.sort((a, b) => {
     const an = parseFloat(String(cell(a, ix.netPnl)).replace(/[%£$,]/g, ''));

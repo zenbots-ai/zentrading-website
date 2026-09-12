@@ -88,6 +88,9 @@
       </thead>
       <tbody id="btTableBody"></tbody>
     </table>
+    <div class="bt-load-more-wrap" id="btLoadMoreWrap" hidden>
+      <button type="button" class="tbtn" id="btLoadMoreBtn" onclick="loadMoreBacktest()">Load More</button>
+    </div>
     <div class="bt-empty" id="btEmpty">No backtest results yet.</div>
   </div>
 </div>
@@ -268,6 +271,11 @@ async function fetchSheetData() {
 }
 
 let btSheetValues = [];
+const BT_PAGE_SIZE = 100;
+let btFilteredRows = [];
+let btVisibleCount = 0;
+let btColIx = null;
+let btSheetHeaders = [];
 
 function sizeMarketFilter() {
   const sel = document.getElementById('btMarketFilter');
@@ -301,8 +309,8 @@ function exportBacktestCsv() {
   const headers = [...table.querySelectorAll('thead th')].map(th =>
     th.textContent.replace(/\s+/g, ' ').trim()
   );
-  const bodyRows = [...table.querySelectorAll('tbody tr')].map(tr =>
-    [...tr.querySelectorAll('td')].map(td => td.innerText.replace(/\s+/g, ' ').trim())
+  const bodyRows = btFilteredRows.map((r, i) =>
+    backtestRowDisplay(r, i, btSheetHeaders, btColIx)
   );
   const csv = [headers, ...bodyRows].map(row => row.map(csvCell).join(',')).join('\r\n');
   const market = (document.getElementById('btMarketFilter') || {}).value || 'all';
@@ -317,14 +325,8 @@ function exportBacktestCsv() {
   URL.revokeObjectURL(a.href);
 }
 
-function renderRows(values) {
-  const body = document.getElementById('btTableBody');
-  const empty = document.getElementById('btEmpty');
-  body.innerHTML = '';
-  const marketFilter = (document.getElementById('btMarketFilter') || {}).value || 'Forex';
-  let rows = (values || []).slice(1).filter(r => r && r.some(c => String(c).trim()));
-  const headers = (values || [])[0] || [];
-  const ix = {
+function backtestColIndex(headers) {
+  return {
     bot: colIndex(headers, 'Bot'),
     asset: colIndex(headers, 'Asset'),
     market: colIndex(headers, 'Market'),
@@ -347,6 +349,125 @@ function renderRows(values) {
     dateRun: colIndex(headers, 'Date Run'),
     notes: colIndex(headers, 'Notes'),
   };
+}
+
+function backtestRowDisplay(r, i, headers, ix) {
+  const validator = validatorStatusFromRow(headers, r);
+  const stop = cell(r, ix.stop);
+  const takeProfit = cell(r, ix.takeProfit);
+  const ind1 = cell(r, ix.ind1);
+  const ind2 = cell(r, ix.ind2);
+  const ind3 = cell(r, ix.ind3);
+  return [
+    String(i + 1),
+    cell(r, ix.bot),
+    validatorLabel(validator),
+    cell(r, ix.asset) || '—',
+    cell(r, ix.market) || '—',
+    cell(r, ix.direction) || '—',
+    blank(stop) ? '—' : stop,
+    blank(takeProfit) ? '—' : takeProfit,
+    blank(ind1) ? '—' : ind1,
+    blank(ind2) ? '—' : ind2,
+    blank(ind3) ? '—' : ind3,
+    formatNumber(cell(r, ix.trades)),
+    formatNetProfit(cell(r, ix.netPnl)),
+    formatPct(cell(r, ix.wr)),
+    formatUSD(cell(r, ix.tradePnl)),
+    formatUSD(cell(r, ix.financing)),
+    formatPct(cell(r, ix.ret)),
+    cell(r, ix.pf) || '—',
+    cell(r, ix.sharpe) || '—',
+    formatPct(cell(r, ix.dd)),
+    cell(r, ix.years),
+    cell(r, ix.dateRun) || '—',
+    cell(r, ix.notes) || '',
+  ];
+}
+
+function backtestRowHtml(r, i, headers, ix) {
+  const bot = cell(r, ix.bot);
+  const validator = validatorStatusFromRow(headers, r);
+  const wr = cell(r, ix.wr);
+  const pf = cell(r, ix.pf);
+  const sharpe = cell(r, ix.sharpe);
+  const netPnl = cell(r, ix.netPnl);
+  const ret = cell(r, ix.ret);
+  const dd = cell(r, ix.dd);
+  const stop = cell(r, ix.stop);
+  const takeProfit = cell(r, ix.takeProfit);
+  const ind1 = cell(r, ix.ind1);
+  const ind2 = cell(r, ix.ind2);
+  const ind3 = cell(r, ix.ind3);
+  const parseN = (val) => parseFloat(String(val).replace(/[%£$,]/g, ''));
+  const wrN = parseN(wr);
+  const wrCls = isNaN(wrN) ? 'bt-neutral' : (wrN > 60 ? 'bt-pos' : (wrN >= 50 ? 'bt-wr-neutral' : 'bt-neg'));
+  const pfN = parseN(pf);
+  const pfCls = isNaN(pfN) ? 'bt-neutral' : (pfN > 1.5 ? 'bt-pos' : (pfN >= 1 ? 'bt-wr-neutral' : 'bt-neg'));
+  const shN = parseN(sharpe);
+  const shCls = isNaN(shN) ? 'bt-neutral' : (shN > 1 ? 'bt-pos' : (shN >= 0 ? 'bt-wr-neutral' : 'bt-neg'));
+  return `
+      <tr>
+        <td class="col-num col-ref" style="color:#999999;font-size:11px">${i + 1}</td>
+        <td class="col-text"><div class="bt-bot-name">${esc(bot)}</div></td>
+        <td class="col-text col-status"><span class="bt-status-badge ${validatorBadgeClass(validator)}">${esc(validatorLabel(validator))}</span></td>
+        <td class="col-text bt-neutral">${esc(cell(r, ix.asset) || '—')}</td>
+        <td class="col-text bt-neutral">${esc(cell(r, ix.market) || '—')}</td>
+        <td class="col-text bt-neutral">${esc(cell(r, ix.direction) || '—')}</td>
+        <td class="col-num bt-neutral">${blank(stop) ? '—' : esc(stop)}</td>
+        <td class="col-num bt-neutral">${blank(takeProfit) ? '—' : esc(takeProfit)}</td>
+        <td class="col-num bt-neutral">${blank(ind1) ? '—' : esc(ind1)}</td>
+        <td class="col-num bt-neutral">${blank(ind2) ? '—' : esc(ind2)}</td>
+        <td class="col-num bt-neutral">${blank(ind3) ? '—' : esc(ind3)}</td>
+        <td class="col-num bt-neutral">${formatNumber(cell(r, ix.trades))}</td>
+        <td class="col-num ${numClass(netPnl)}">${formatNetProfit(netPnl)}</td>
+        <td class="col-num ${wrCls}">${formatPct(wr)}</td>
+        <td class="col-num bt-neutral">${formatUSD(cell(r, ix.tradePnl))}</td>
+        <td class="col-num bt-neutral">${formatUSD(cell(r, ix.financing))}</td>
+        <td class="col-num ${numClass(ret)}">${formatPct(ret)}</td>
+        <td class="col-num ${pfCls}">${esc(pf || '—')}</td>
+        <td class="col-num ${shCls}">${esc(sharpe || '—')}</td>
+        <td class="col-num ${ddClass(dd)}">${formatPct(dd)}</td>
+        <td class="col-text bt-neutral">${esc(cell(r, ix.years))}</td>
+        <td class="col-text bt-neutral">${esc(cell(r, ix.dateRun) || '—')}</td>
+        <td class="col-num col-notes bt-neutral">${esc(cell(r, ix.notes) || '')}</td>
+      </tr>
+    `;
+}
+
+function setLoadMoreVisible(show) {
+  const wrap = document.getElementById('btLoadMoreWrap');
+  if (wrap) wrap.hidden = !show;
+}
+
+function appendBacktestRows(from, to) {
+  const body = document.getElementById('btTableBody');
+  const chunk = [];
+  for (let i = from; i < to; i++) {
+    chunk.push(backtestRowHtml(btFilteredRows[i], i, btSheetHeaders, btColIx));
+  }
+  body.insertAdjacentHTML('beforeend', chunk.join(''));
+}
+
+function loadMoreBacktest() {
+  if (btVisibleCount >= btFilteredRows.length) {
+    setLoadMoreVisible(false);
+    return;
+  }
+  const next = Math.min(btVisibleCount + BT_PAGE_SIZE, btFilteredRows.length);
+  appendBacktestRows(btVisibleCount, next);
+  btVisibleCount = next;
+  setLoadMoreVisible(btVisibleCount < btFilteredRows.length);
+}
+
+function renderRows(values) {
+  const body = document.getElementById('btTableBody');
+  const empty = document.getElementById('btEmpty');
+  body.innerHTML = '';
+  const marketFilter = (document.getElementById('btMarketFilter') || {}).value || 'Forex';
+  let rows = (values || []).slice(1).filter(r => r && r.some(c => String(c).trim()));
+  const headers = (values || [])[0] || [];
+  const ix = backtestColIndex(headers);
   if (marketFilter !== 'All Markets') {
     rows = rows.filter(r => String(cell(r, ix.market)).trim() === marketFilter);
   }
@@ -355,69 +476,19 @@ function renderRows(values) {
     const bn = parseFloat(String(cell(b, ix.netPnl)).replace(/[%£$,]/g, ''));
     return (isNaN(bn) ? -Infinity : bn) - (isNaN(an) ? -Infinity : an);
   });
+  btSheetHeaders = headers;
+  btColIx = ix;
+  btFilteredRows = rows;
+  btVisibleCount = 0;
   if (!rows.length) {
     empty.style.display = 'block';
+    setLoadMoreVisible(false);
     return;
   }
   empty.style.display = 'none';
-  rows.forEach((r, i) => {
-    const bot      = cell(r, ix.bot);
-    const validator= validatorStatusFromRow(headers, r);
-    const asset    = cell(r, ix.asset);
-    const market   = cell(r, ix.market);
-    const direction= cell(r, ix.direction);
-    const stop     = cell(r, ix.stop);
-    const takeProfit = cell(r, ix.takeProfit);
-    const ind1     = cell(r, ix.ind1);
-    const ind2     = cell(r, ix.ind2);
-    const ind3     = cell(r, ix.ind3);
-    const trades   = cell(r, ix.trades);
-    const wr       = cell(r, ix.wr);
-    const tradePnl = cell(r, ix.tradePnl);
-    const financing= cell(r, ix.financing);
-    const netPnl   = cell(r, ix.netPnl);
-    const ret      = cell(r, ix.ret);
-    const pf       = cell(r, ix.pf);
-    const sharpe   = cell(r, ix.sharpe);
-    const dd       = cell(r, ix.dd);
-    const years    = cell(r, ix.years);
-    const dateRun  = cell(r, ix.dateRun);
-    const notes    = cell(r, ix.notes);
-    const parseN = (val) => parseFloat(String(val).replace(/[%£$,]/g, ''));
-    const wrN = parseN(wr);
-    const wrCls = isNaN(wrN) ? 'bt-neutral' : (wrN > 60 ? 'bt-pos' : (wrN >= 50 ? 'bt-wr-neutral' : 'bt-neg'));
-    const pfN = parseN(pf);
-    const pfCls = isNaN(pfN) ? 'bt-neutral' : (pfN > 1.5 ? 'bt-pos' : (pfN >= 1 ? 'bt-wr-neutral' : 'bt-neg'));
-    const shN = parseN(sharpe);
-    const shCls = isNaN(shN) ? 'bt-neutral' : (shN > 1 ? 'bt-pos' : (shN >= 0 ? 'bt-wr-neutral' : 'bt-neg'));
-    body.insertAdjacentHTML('beforeend', `
-      <tr>
-        <td class="col-num col-ref" style="color:#999999;font-size:11px">${i + 1}</td>
-        <td class="col-text"><div class="bt-bot-name">${esc(bot)}</div></td>
-        <td class="col-text col-status"><span class="bt-status-badge ${validatorBadgeClass(validator)}">${esc(validatorLabel(validator))}</span></td>
-        <td class="col-text bt-neutral">${esc(asset || '—')}</td>
-        <td class="col-text bt-neutral">${esc(market || '—')}</td>
-        <td class="col-text bt-neutral">${esc(direction || '—')}</td>
-        <td class="col-num bt-neutral">${blank(stop) ? '—' : esc(stop)}</td>
-        <td class="col-num bt-neutral">${blank(takeProfit) ? '—' : esc(takeProfit)}</td>
-        <td class="col-num bt-neutral">${blank(ind1) ? '—' : esc(ind1)}</td>
-        <td class="col-num bt-neutral">${blank(ind2) ? '—' : esc(ind2)}</td>
-        <td class="col-num bt-neutral">${blank(ind3) ? '—' : esc(ind3)}</td>
-        <td class="col-num bt-neutral">${formatNumber(trades)}</td>
-        <td class="col-num ${numClass(netPnl)}">${formatNetProfit(netPnl)}</td>
-        <td class="col-num ${wrCls}">${formatPct(wr)}</td>
-        <td class="col-num bt-neutral">${formatUSD(tradePnl)}</td>
-        <td class="col-num bt-neutral">${formatUSD(financing)}</td>
-        <td class="col-num ${numClass(ret)}">${formatPct(ret)}</td>
-        <td class="col-num ${pfCls}">${esc(pf || '—')}</td>
-        <td class="col-num ${shCls}">${esc(sharpe || '—')}</td>
-        <td class="col-num ${ddClass(dd)}">${formatPct(dd)}</td>
-        <td class="col-text bt-neutral">${esc(years)}</td>
-        <td class="col-text bt-neutral">${esc(dateRun || '—')}</td>
-        <td class="col-num col-notes bt-neutral">${esc(notes || '')}</td>
-      </tr>
-    `);
-  });
+  btVisibleCount = Math.min(BT_PAGE_SIZE, rows.length);
+  appendBacktestRows(0, btVisibleCount);
+  setLoadMoreVisible(btVisibleCount < rows.length);
 }
 
 async function renderBtTableFromSheet() {

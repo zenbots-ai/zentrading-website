@@ -2108,6 +2108,17 @@ body:has(.nav) {
   color: #FFFFF2;
   font-weight: 600;
 }
+.bt-load-more-wrap {
+  display: flex;
+  justify-content: center;
+  padding: 16px 0 4px;
+}
+.bt-load-more-wrap[hidden] {
+  display: none;
+}
+.bt-load-more-wrap .tbtn {
+  min-width: 140px;
+}
 .bt-empty {
   text-align: center;
   padding: 60px 20px;

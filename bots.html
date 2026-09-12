@@ -52,7 +52,7 @@
     <button class="tbtn" id="btExportBtn" onclick="exportBacktestCsv()" title="Export CSV"><i class="ri-download-2-line"></i></button>
     <button class="tbtn" id="btInfoBtn"><i class="ri-information-line"></i></button>
     <button class="bt-add-btn" id="btRefreshBtn" onclick="refreshBacktest(true)"><i class="ri-refresh-line"></i></button>
-    <div class="bt-info-popover" id="btInfoPopover">All backtests use a starting capital of £10,000. Results use OANDA data from Jan 2025. A result is only considered statistically valid if it passes: t-stat > 3.0 (accounts for 93+ parameter combinations tested), minimum 100 trades, Sharpe > 1.0 after costs, max drawdown < 20%, and at least 60% of walk-forward folds profitable. Rows with fewer than 100 trades are flagged as statistically insufficient.</div>
+    <div class="bt-info-popover" id="btInfoPopover">All backtests use a starting capital of £10,000. Results use OANDA data from Jan 2010 (2004 for VIX-based strategies). A result only passes the 8-point validator if it clears: (1) t-stat > 3.0, (2) minimum 100 trades, (3) Sharpe > 1.0 after costs, (4) holdout decay ratio ≥ 0.5 (out-of-sample performance vs in-sample), (5) at least 60% of walk-forward folds profitable, (6) max drawdown < 20%, (7) correlation to other deployed strategies < 0.5, (8) trading costs (swap/financing) subtracted. See the Validator column for each row's overall PASS/FAIL/INCOMPLETE status.</div>
   </div>
 </div>
 
@@ -63,6 +63,7 @@
         <tr>
           <th class="col-num col-ref">#</th>
           <th class="col-text col-bot">Bot</th>
+          <th class="col-text col-status">Validator</th>
           <th class="col-text">Asset</th>
           <th class="col-text">Market</th>
           <th class="col-text">Direction</th>
@@ -153,6 +154,30 @@ function statusClass(status) {
   if (s.includes('fail') || s.includes('error')) return 'fail';
   if (s.includes('done') || s.includes('complete') || s.includes('pass')) return 'done';
   return 'pending';
+}
+
+function validatorBadgeClass(status) {
+  const s = String(status || '').trim().toLowerCase();
+  if (s.startsWith('pass')) return 'pass';
+  if (s.startsWith('fail')) return 'fail';
+  if (s.startsWith('incomplete')) return 'incomplete';
+  return 'pending';
+}
+
+function validatorLabel(status) {
+  const raw = String(status || '').trim();
+  if (!raw) return '—';
+  const token = raw.split(/\s+/)[0].toUpperCase();
+  if (token === 'PASS' || token === 'FAIL' || token === 'INCOMPLETE') return token;
+  return raw;
+}
+
+function validatorStatusFromRow(headers, row) {
+  const idx = (headers || []).findIndex(
+    h => String(h || '').trim().toLowerCase() === 'validator status'
+  );
+  if (idx >= 0) return row[idx] || '';
+  return row[20] || '';
 }
 
 function numClass(val, invert) {
@@ -296,9 +321,11 @@ function renderRows(values) {
     return;
   }
   empty.style.display = 'none';
+  const headers = (values || [])[0] || [];
   rows.forEach((r, i) => {
-    // Sheet columns: Bot(0) | Asset(1) | Market(2) | Direction(3) | Entry Param(4) | Trades(5) | Win Rate %(6) | Trade P&L $(7) | Financing $(8) | Net Profit $(9) | Return %(10) | Profit Factor(11) | Sharpe(12) | Max Drawdown %(13) | Years(14) | Date Run(15) | Notes(16)
+    // Sheet columns: Bot(0) | Asset(1) | Market(2) | Direction(3) | Entry Param(4) | Trades(5) | Win Rate %(6) | Trade P&L $(7) | Financing $(8) | Net Profit $(9) | Return %(10) | Profit Factor(11) | Sharpe(12) | Max Drawdown %(13) | Years(14) | Date Run(15) | Notes(16) | In-Sample Sharpe(17) | Holdout Sharpe(18) | Holdout Decay(19) | Validator Status(20)
     const bot      = r[0]  || '';
+    const validator= validatorStatusFromRow(headers, r);
     const asset    = r[1]  || '';
     const market   = r[2]  || '';
     const direction= r[3]  || '';
@@ -326,6 +353,7 @@ function renderRows(values) {
       <tr>
         <td class="col-num col-ref" style="color:#999999;font-size:11px">${i + 1}</td>
         <td class="col-text"><div class="bt-bot-name">${esc(bot)}</div></td>
+        <td class="col-text col-status"><span class="bt-status-badge ${validatorBadgeClass(validator)}">${esc(validatorLabel(validator))}</span></td>
         <td class="col-text bt-neutral">${esc(asset || '—')}</td>
         <td class="col-text bt-neutral">${esc(market || '—')}</td>
         <td class="col-text bt-neutral">${esc(direction || '—')}</td>

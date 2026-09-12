@@ -2058,9 +2058,17 @@ body:has(.nav) {
   color: #999999;
   margin-top: 1px;
 }
+.bt-table td.col-status {
+  width: 88px;
+  min-width: 88px;
+}
 .bt-status-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   font-size: 10px;
   font-weight: 700;
+  letter-spacing: 0.03em;
   padding: 2px 7px;
   border-radius: 4px;
 }
@@ -2079,6 +2087,14 @@ body:has(.nav) {
 .bt-status-badge.fail {
   background: rgba(255,109,70,0.15);
   color: #FF6D46;
+}
+.bt-status-badge.pass {
+  background: rgba(9,251,157,0.15);
+  color: #09FB9D;
+}
+.bt-status-badge.incomplete {
+  background: rgba(255,153,0,0.15);
+  color: #FF9900;
 }
 .bt-pos {
   color: #09FB9D;

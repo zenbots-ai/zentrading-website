@@ -172,11 +172,22 @@ function validatorLabel(status) {
   return raw;
 }
 
+function colIndex(headers, ...names) {
+  const lower = (headers || []).map(h => String(h || '').trim().toLowerCase());
+  for (const name of names) {
+    const idx = lower.indexOf(name.toLowerCase());
+    if (idx >= 0) return idx;
+  }
+  return -1;
+}
+
+function cell(row, idx) {
+  return idx >= 0 ? (row[idx] || '') : '';
+}
+
 function validatorStatusFromRow(headers, row) {
-  const idx = (headers || []).findIndex(
-    h => String(h || '').trim().toLowerCase() === 'validator status'
-  );
-  if (idx >= 0) return row[idx] || '';
+  const idx = colIndex(headers, 'Validator Status');
+  if (idx >= 0) return cell(row, idx);
   return row[20] || '';
 }
 
@@ -308,12 +319,32 @@ function renderRows(values) {
   body.innerHTML = '';
   const marketFilter = (document.getElementById('btMarketFilter') || {}).value || 'Forex';
   let rows = (values || []).slice(1).filter(r => r && r.some(c => String(c).trim()));
+  const headers = (values || [])[0] || [];
+  const ix = {
+    bot: colIndex(headers, 'Bot'),
+    asset: colIndex(headers, 'Asset'),
+    market: colIndex(headers, 'Market'),
+    direction: colIndex(headers, 'Direction'),
+    entry: colIndex(headers, 'Entry Param'),
+    trades: colIndex(headers, 'Trades'),
+    wr: colIndex(headers, 'Win Rate %'),
+    tradePnl: colIndex(headers, 'Trade P&L $'),
+    financing: colIndex(headers, 'Financing $'),
+    netPnl: colIndex(headers, 'Net Profit $'),
+    ret: colIndex(headers, 'Return %'),
+    pf: colIndex(headers, 'Profit Factor'),
+    sharpe: colIndex(headers, 'Sharpe'),
+    dd: colIndex(headers, 'Max Drawdown %'),
+    years: colIndex(headers, 'Years'),
+    dateRun: colIndex(headers, 'Date Run'),
+    notes: colIndex(headers, 'Notes'),
+  };
   if (marketFilter !== 'All Markets') {
-    rows = rows.filter(r => String(r[2] || '').trim() === marketFilter);
+    rows = rows.filter(r => String(cell(r, ix.market)).trim() === marketFilter);
   }
   rows.sort((a, b) => {
-    const an = parseFloat(String(a[9] ?? '').replace(/[%£$,]/g, ''));
-    const bn = parseFloat(String(b[9] ?? '').replace(/[%£$,]/g, ''));
+    const an = parseFloat(String(cell(a, ix.netPnl)).replace(/[%£$,]/g, ''));
+    const bn = parseFloat(String(cell(b, ix.netPnl)).replace(/[%£$,]/g, ''));
     return (isNaN(bn) ? -Infinity : bn) - (isNaN(an) ? -Infinity : an);
   });
   if (!rows.length) {
@@ -321,27 +352,25 @@ function renderRows(values) {
     return;
   }
   empty.style.display = 'none';
-  const headers = (values || [])[0] || [];
   rows.forEach((r, i) => {
-    // Sheet columns: Bot(0) | Asset(1) | Market(2) | Direction(3) | Entry Param(4) | Trades(5) | Win Rate %(6) | Trade P&L $(7) | Financing $(8) | Net Profit $(9) | Return %(10) | Profit Factor(11) | Sharpe(12) | Max Drawdown %(13) | Years(14) | Date Run(15) | Notes(16) | In-Sample Sharpe(17) | Holdout Sharpe(18) | Holdout Decay(19) | Validator Status(20)
-    const bot      = r[0]  || '';
+    const bot      = cell(r, ix.bot);
     const validator= validatorStatusFromRow(headers, r);
-    const asset    = r[1]  || '';
-    const market   = r[2]  || '';
-    const direction= r[3]  || '';
-    const entryP   = r[4]  || '';
-    const trades   = r[5]  || '';
-    const wr       = r[6]  || '';
-    const tradePnl = r[7]  || '';
-    const financing= r[8]  || '';
-    const netPnl   = r[9]  || '';
-    const ret      = r[10] || '';
-    const pf       = r[11] || '';
-    const sharpe   = r[12] || '';
-    const dd       = r[13] || '';
-    const years    = r[14] || '';
-    const dateRun  = r[15] || '';
-    const notes    = r[16] || '';
+    const asset    = cell(r, ix.asset);
+    const market   = cell(r, ix.market);
+    const direction= cell(r, ix.direction);
+    const entryP   = cell(r, ix.entry);
+    const trades   = cell(r, ix.trades);
+    const wr       = cell(r, ix.wr);
+    const tradePnl = cell(r, ix.tradePnl);
+    const financing= cell(r, ix.financing);
+    const netPnl   = cell(r, ix.netPnl);
+    const ret      = cell(r, ix.ret);
+    const pf       = cell(r, ix.pf);
+    const sharpe   = cell(r, ix.sharpe);
+    const dd       = cell(r, ix.dd);
+    const years    = cell(r, ix.years);
+    const dateRun  = cell(r, ix.dateRun);
+    const notes    = cell(r, ix.notes);
     const parseN = (val) => parseFloat(String(val).replace(/[%£$,]/g, ''));
     const wrN = parseN(wr);
     const wrCls = isNaN(wrN) ? 'bt-neutral' : (wrN > 60 ? 'bt-pos' : (wrN >= 50 ? 'bt-wr-neutral' : 'bt-neg'));

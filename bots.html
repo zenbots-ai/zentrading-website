@@ -67,9 +67,8 @@
           <th class="col-text">Asset</th>
           <th class="col-text">Market</th>
           <th class="col-text">Direction</th>
-          <th class="col-text">Entry Param</th>
-          <th class="col-num">Stop Loss Level</th>
-          <th class="col-num">Take Profit Level</th>
+          <th class="col-num">Stop Loss</th>
+          <th class="col-num">Take Profit</th>
           <th class="col-num">Indicator 1 Setting</th>
           <th class="col-num">Indicator 2 Setting</th>
           <th class="col-num">Indicator 3 Setting</th>
@@ -330,9 +329,8 @@ function renderRows(values) {
     asset: colIndex(headers, 'Asset'),
     market: colIndex(headers, 'Market'),
     direction: colIndex(headers, 'Direction'),
-    entry: colIndex(headers, 'Entry Param'),
-    stop: colIndex(headers, 'Stop Loss Level'),
-    takeProfit: colIndex(headers, 'Take Profit Level'),
+    stop: colIndex(headers, 'Stop Loss Level', 'Stop Loss'),
+    takeProfit: colIndex(headers, 'Take Profit Level', 'Take Profit'),
     ind1: colIndex(headers, 'Indicator 1 Setting'),
     ind2: colIndex(headers, 'Indicator 2 Setting'),
     ind3: colIndex(headers, 'Indicator 3 Setting'),
@@ -368,7 +366,6 @@ function renderRows(values) {
     const asset    = cell(r, ix.asset);
     const market   = cell(r, ix.market);
     const direction= cell(r, ix.direction);
-    const entryP   = cell(r, ix.entry);
     const stop     = cell(r, ix.stop);
     const takeProfit = cell(r, ix.takeProfit);
     const ind1     = cell(r, ix.ind1);
@@ -401,7 +398,6 @@ function renderRows(values) {
         <td class="col-text bt-neutral">${esc(asset || '—')}</td>
         <td class="col-text bt-neutral">${esc(market || '—')}</td>
         <td class="col-text bt-neutral">${esc(direction || '—')}</td>
-        <td class="col-text bt-neutral">${esc(entryP || '—')}</td>
         <td class="col-num bt-neutral">${blank(stop) ? '—' : esc(stop)}</td>
         <td class="col-num bt-neutral">${blank(takeProfit) ? '—' : esc(takeProfit)}</td>
         <td class="col-num bt-neutral">${blank(ind1) ? '—' : esc(ind1)}</td>

@@ -1985,7 +1985,7 @@ body:has(.nav) {
 }
 .bt-table {
   width: 100%;
-  min-width: 1080px;
+  min-width: 1480px;
   border-collapse: separate;
   border-spacing: 0;
   font-size: 12px;

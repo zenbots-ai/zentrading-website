@@ -68,6 +68,11 @@
           <th class="col-text">Market</th>
           <th class="col-text">Direction</th>
           <th class="col-text">Entry Param</th>
+          <th class="col-num">Stop Loss Level</th>
+          <th class="col-num">Take Profit Level</th>
+          <th class="col-num">Indicator 1 Setting</th>
+          <th class="col-num">Indicator 2 Setting</th>
+          <th class="col-num">Indicator 3 Setting</th>
           <th class="col-num">Trades</th>
           <th class="col-num">Net Profit $</th>
           <th class="col-num">Win Rate %</th>
@@ -326,6 +331,11 @@ function renderRows(values) {
     market: colIndex(headers, 'Market'),
     direction: colIndex(headers, 'Direction'),
     entry: colIndex(headers, 'Entry Param'),
+    stop: colIndex(headers, 'Stop Loss Level'),
+    takeProfit: colIndex(headers, 'Take Profit Level'),
+    ind1: colIndex(headers, 'Indicator 1 Setting'),
+    ind2: colIndex(headers, 'Indicator 2 Setting'),
+    ind3: colIndex(headers, 'Indicator 3 Setting'),
     trades: colIndex(headers, 'Trades'),
     wr: colIndex(headers, 'Win Rate %'),
     tradePnl: colIndex(headers, 'Trade P&L $'),
@@ -359,6 +369,11 @@ function renderRows(values) {
     const market   = cell(r, ix.market);
     const direction= cell(r, ix.direction);
     const entryP   = cell(r, ix.entry);
+    const stop     = cell(r, ix.stop);
+    const takeProfit = cell(r, ix.takeProfit);
+    const ind1     = cell(r, ix.ind1);
+    const ind2     = cell(r, ix.ind2);
+    const ind3     = cell(r, ix.ind3);
     const trades   = cell(r, ix.trades);
     const wr       = cell(r, ix.wr);
     const tradePnl = cell(r, ix.tradePnl);
@@ -387,6 +402,11 @@ function renderRows(values) {
         <td class="col-text bt-neutral">${esc(market || '—')}</td>
         <td class="col-text bt-neutral">${esc(direction || '—')}</td>
         <td class="col-text bt-neutral">${esc(entryP || '—')}</td>
+        <td class="col-num bt-neutral">${blank(stop) ? '—' : esc(stop)}</td>
+        <td class="col-num bt-neutral">${blank(takeProfit) ? '—' : esc(takeProfit)}</td>
+        <td class="col-num bt-neutral">${blank(ind1) ? '—' : esc(ind1)}</td>
+        <td class="col-num bt-neutral">${blank(ind2) ? '—' : esc(ind2)}</td>
+        <td class="col-num bt-neutral">${blank(ind3) ? '—' : esc(ind3)}</td>
         <td class="col-num bt-neutral">${formatNumber(trades)}</td>
         <td class="col-num ${numClass(netPnl)}">${formatNetProfit(netPnl)}</td>
         <td class="col-num ${wrCls}">${formatPct(wr)}</td>

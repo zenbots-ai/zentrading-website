@@ -50,7 +50,7 @@
       <option value="Crypto">Crypto</option>
       <option value="Test Bots">Test Bots</option>
     </select>
-    <button class="tbtn" id="btSortBtn" onclick="toggleBacktestSort()" title="Sorting by Net Profit $"><i class="ri-sort-asc"></i><span id="btSortLabel">Net Profit $</span></button>
+    <button class="tbtn" id="btSortBtn" onclick="toggleBacktestSort()" title="Sorting by Net Profit"><i class="ri-sort-asc"></i><span id="btSortLabel">Net Profit</span></button>
     <button class="tbtn" id="btExportBtn" onclick="exportBacktestCsv()" title="Export CSV"><i class="ri-download-2-line"></i></button>
     <button class="tbtn" id="btInfoBtn"><i class="ri-information-line"></i></button>
     <button class="bt-add-btn" id="btRefreshBtn" onclick="refreshBacktest(true)"><i class="ri-refresh-line"></i></button>
@@ -75,14 +75,14 @@
           <th class="col-num">Ind. 2</th>
           <th class="col-num">Ind. 3</th>
           <th class="col-num">Trades</th>
-          <th class="col-num">Net Profit $</th>
+          <th class="col-num">Net Profit</th>
           <th class="col-num">Sharpe</th>
-          <th class="col-num">Return %</th>
-          <th class="col-num">Win Rate %</th>
-          <th class="col-num">Trade P&amp;L $</th>
-          <th class="col-num">Financing $</th>
+          <th class="col-num">An. Return</th>
+          <th class="col-num">Win Rate</th>
+          <th class="col-num">P&amp;L</th>
+          <th class="col-num">Financing</th>
           <th class="col-num">Profit Factor</th>
-          <th class="col-num">Max Drawdown %</th>
+          <th class="col-num">Max Drawdown</th>
           <th class="col-text">Years</th>
           <th class="col-text">Date Run</th>
           <th class="col-num col-notes">Notes</th>
@@ -304,10 +304,10 @@ function syncSortButton() {
   const btn = document.getElementById('btSortBtn');
   const label = document.getElementById('btSortLabel');
   const sharpe = btSortBy === 'sharpe';
-  if (label) label.textContent = sharpe ? 'Sharpe' : 'Net Profit $';
+  if (label) label.textContent = sharpe ? 'Sharpe' : 'Net Profit';
   if (btn) {
     btn.classList.toggle('active', sharpe);
-    btn.title = sharpe ? 'Sorting by Sharpe' : 'Sorting by Net Profit $';
+    btn.title = sharpe ? 'Sorting by Sharpe' : 'Sorting by Net Profit';
     btn.setAttribute('aria-pressed', sharpe ? 'true' : 'false');
   }
 }

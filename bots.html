@@ -278,6 +278,13 @@ let btFilteredRows = [];
 let btVisibleCount = 0;
 let btColIx = null;
 let btSheetHeaders = [];
+const BT_SORT_CYCLE = ['netPnl', 'sharpe', 'ret', 'wr'];
+const BT_SORT_LABELS = {
+  netPnl: 'Net Profit',
+  sharpe: 'Sharpe',
+  ret: 'An. Return',
+  wr: 'Win Rate',
+};
 let btSortBy = 'netPnl';
 
 function sizeMarketFilter() {
@@ -303,17 +310,19 @@ function onMarketFilterChange() {
 function syncSortButton() {
   const btn = document.getElementById('btSortBtn');
   const label = document.getElementById('btSortLabel');
-  const sharpe = btSortBy === 'sharpe';
-  if (label) label.textContent = sharpe ? 'Sharpe' : 'Net Profit';
+  const sortLabel = BT_SORT_LABELS[btSortBy] || BT_SORT_LABELS.netPnl;
+  const active = btSortBy !== 'netPnl';
+  if (label) label.textContent = sortLabel;
   if (btn) {
-    btn.classList.toggle('active', sharpe);
-    btn.title = sharpe ? 'Sorting by Sharpe' : 'Sorting by Net Profit';
-    btn.setAttribute('aria-pressed', sharpe ? 'true' : 'false');
+    btn.classList.toggle('active', active);
+    btn.title = `Sorting by ${sortLabel}`;
+    btn.setAttribute('aria-pressed', active ? 'true' : 'false');
   }
 }
 
 function toggleBacktestSort() {
-  btSortBy = btSortBy === 'sharpe' ? 'netPnl' : 'sharpe';
+  const i = BT_SORT_CYCLE.indexOf(btSortBy);
+  btSortBy = BT_SORT_CYCLE[(i + 1) % BT_SORT_CYCLE.length];
   syncSortButton();
   renderRows(btSheetValues);
 }
@@ -498,7 +507,7 @@ function renderRows(values) {
       rows = rows.filter(r => String(cell(r, ix.market)).trim() === marketFilter);
     }
   }
-  const sortIx = btSortBy === 'sharpe' ? ix.sharpe : ix.netPnl;
+  const sortIx = ix[btSortBy] ?? ix.netPnl;
   rows.sort((a, b) => {
     const an = parseFloat(String(cell(a, sortIx)).replace(/[%£$,]/g, ''));
     const bn = parseFloat(String(cell(b, sortIx)).replace(/[%£$,]/g, ''));

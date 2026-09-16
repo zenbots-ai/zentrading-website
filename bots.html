@@ -98,9 +98,19 @@
 </div>
 
 <div class="tab-panel" id="tab-paper">
-  <div class="coming-soon">
-    <h3>Paper Trading</h3>
-    <p>Once a bot passes backtesting with a consistent edge, it moves here to run on live market data with fake money. This confirms the edge works in real conditions before risking real capital.</p>
+  <!-- PAPER TRADES MOCKUP: placeholder/dummy data only. Not wired to any broker or live feed. -->
+  <div class="paper-dash">
+    <div class="paper-banner" role="status">
+      <span class="paper-banner-tag">Design mockup</span>
+      <span>Placeholder data only — not live, not connected to a broker or paper account.</span>
+    </div>
+    <div class="paper-sessions" id="paperSessions"></div>
+    <div class="paper-toolbar">
+      <div class="paper-bot-switch" id="paperBotSwitch" role="tablist" aria-label="Paper bot"></div>
+      <div class="paper-sync" id="paperSync"></div>
+    </div>
+    <div id="paperRisk"></div>
+    <div id="paperPositions"></div>
   </div>
 </div>
 
@@ -694,10 +704,500 @@ document.addEventListener('click', (e) => {
 });
 document.getElementById('btInfoBtn')?.addEventListener('click', toggleBtInfo);
 
+/* ═══════════════════════════════════════════
+   Paper Trades tab mockup — placeholder data only.
+   Not wired to a broker, sheet, or live feed.
+   Do not reuse these numbers as real paper-trading state.
+═══════════════════════════════════════════ */
+const PAPER_BOTS = [
+  {
+    id: 'mean-reversion-bot-fx',
+    haltReason: '',
+    allocated: 10000,
+    bodEquity: 10142.18,
+    equity: 10087.44,
+    drawdownPct: 6.2,
+    drawdownCap: 12,
+    dailyLossPct: 1.08,
+    dailyLossCap: 3,
+    exposureUsed: 2400,
+    exposureLimit: 5000,
+    positions: [
+      { symbol: 'EURUSD', side: 'Long', qty: 45000, marketValue: 4210.40, alloc: 41.7, pnl: 41.20, swap: -2.18, policy: 'deny-add', tag: 'over-limit' },
+      { symbol: 'USDJPY', side: 'Short', qty: 18000, marketValue: 2104.12, alloc: 20.9, pnl: -18.40, swap: 4.62, policy: 'allow', tag: 'mean-rev' },
+      { symbol: 'AUDCAD', side: 'Long', qty: 22000, marketValue: 1956.05, alloc: 19.4, pnl: 12.05, swap: -1.04, policy: 'allow', tag: 'mean-rev' },
+      { symbol: 'GBPUSD', side: 'Long', qty: 12000, marketValue: 1812.33, alloc: 18.0, pnl: -22.80, swap: -3.40, policy: 'allow', tag: 'mean-rev' },
+    ],
+  },
+  {
+    id: 'carry-trade-bot',
+    haltReason: '',
+    allocated: 10000,
+    bodEquity: 10348.90,
+    equity: 10384.10,
+    drawdownPct: 2.1,
+    drawdownCap: 12,
+    dailyLossPct: 0,
+    dailyLossCap: 3,
+    exposureUsed: 1100,
+    exposureLimit: 5000,
+    positions: [
+      { symbol: 'AUDJPY', side: 'Long', qty: 28000, marketValue: 2814.60, alloc: 27.1, pnl: 22.40, swap: 8.16, policy: 'allow', tag: 'carry' },
+      { symbol: 'NZDJPY', side: 'Long', qty: 26000, marketValue: 2598.22, alloc: 25.0, pnl: 9.80, swap: 7.44, policy: 'allow', tag: 'carry' },
+      { symbol: 'GBPJPY', side: 'Long', qty: 16000, marketValue: 2210.18, alloc: 21.3, pnl: -6.12, swap: 5.90, policy: 'allow', tag: 'carry' },
+    ],
+  },
+  {
+    id: 'trend-following-bot-fx',
+    haltReason: '',
+    allocated: 10000,
+    bodEquity: 10062.40,
+    equity: 9872.55,
+    drawdownPct: 8.4,
+    drawdownCap: 12,
+    dailyLossPct: 1.89,
+    dailyLossCap: 3,
+    exposureUsed: 3200,
+    exposureLimit: 5000,
+    positions: [
+      { symbol: 'EURJPY', side: 'Long', qty: 30000, marketValue: 3124.80, alloc: 31.6, pnl: -48.20, swap: -4.10, policy: 'allow', tag: 'trend' },
+      { symbol: 'GBPJPY', side: 'Long', qty: 22000, marketValue: 2488.15, alloc: 25.2, pnl: -61.05, swap: -3.22, policy: 'allow', tag: 'trend' },
+      { symbol: 'USDJPY', side: 'Long', qty: 18000, marketValue: 1998.40, alloc: 20.2, pnl: -22.18, swap: -1.86, policy: 'deny-add', tag: 'over-limit' },
+    ],
+  },
+  {
+    id: 'pairs-trading-bot-fx',
+    haltReason: '',
+    allocated: 10000,
+    bodEquity: 10021.60,
+    equity: 10056.00,
+    drawdownPct: 3.4,
+    drawdownCap: 12,
+    dailyLossPct: 0,
+    dailyLossCap: 3,
+    exposureUsed: 1800,
+    exposureLimit: 5000,
+    positions: [
+      { symbol: 'EURJPY', side: 'Long', qty: 20000, marketValue: 2088.40, alloc: 20.8, pnl: 18.60, swap: -2.44, policy: 'allow', tag: 'spread · EURJPY/GBPJPY' },
+      { symbol: 'GBPJPY', side: 'Short', qty: 18500, marketValue: 2041.22, alloc: 20.3, pnl: 14.10, swap: 3.80, policy: 'allow', tag: 'spread · EURJPY/GBPJPY' },
+      { symbol: 'CADJPY', side: 'Long', qty: 16000, marketValue: 1566.08, alloc: 15.6, pnl: -7.22, swap: -1.18, policy: 'allow', tag: 'spread · CADJPY/AUDJPY' },
+      { symbol: 'AUDJPY', side: 'Short', qty: 15000, marketValue: 1512.90, alloc: 15.0, pnl: 9.40, swap: 2.05, policy: 'allow', tag: 'spread · CADJPY/AUDJPY' },
+    ],
+  },
+  {
+    id: 'vix-reversal-bot',
+    haltReason: 'Daily loss cap reached',
+    allocated: 10000,
+    bodEquity: 10012.80,
+    equity: 9710.22,
+    drawdownPct: 9.8,
+    drawdownCap: 12,
+    dailyLossPct: 3.02,
+    dailyLossCap: 3,
+    exposureUsed: 0,
+    exposureLimit: 5000,
+    positions: [
+      { symbol: 'AUDJPY', side: 'Long', qty: 24000, marketValue: 2410.55, alloc: 24.8, pnl: -88.40, swap: 1.12, policy: 'deny-add', tag: 'vix-spike' },
+      { symbol: 'NZDJPY', side: 'Long', qty: 22000, marketValue: 2188.30, alloc: 22.5, pnl: -74.16, swap: 0.94, policy: 'deny-add', tag: 'vix-spike' },
+    ],
+  },
+  {
+    id: 'equity-milipede-bot',
+    haltReason: '',
+    allocated: 10000,
+    bodEquity: 10188.40,
+    equity: 10221.80,
+    drawdownPct: 4.6,
+    drawdownCap: 12,
+    dailyLossPct: 0,
+    dailyLossCap: 3,
+    exposureUsed: 2100,
+    exposureLimit: 5000,
+    positions: [
+      { symbol: 'EURUSD', side: 'Long', qty: 20000, marketValue: 2144.60, alloc: 21.0, pnl: 16.80, swap: -1.55, policy: 'allow', tag: 'ema-pullback' },
+      { symbol: 'AUDNZD', side: 'Short', qty: 18000, marketValue: 1892.14, alloc: 18.5, pnl: 8.22, swap: 2.40, policy: 'allow', tag: 'ema-pullback' },
+      { symbol: 'USDCAD', side: 'Long', qty: 16000, marketValue: 1720.08, alloc: 16.8, pnl: -11.40, swap: -0.88, policy: 'allow', tag: 'ema-pullback' },
+    ],
+  },
+];
+
+const PAPER_SESSIONS = [
+  { id: 'sydney', name: 'Sydney', openHour: 22, closeHour: 7 },
+  { id: 'tokyo', name: 'Tokyo', openHour: 0, closeHour: 9 },
+  { id: 'london', name: 'London', openHour: 8, closeHour: 17 },
+  { id: 'newyork', name: 'New York', openHour: 13, closeHour: 22 },
+];
+
+let paperSelectedBot = 'all';
+const paperManualHalt = {};
+let paperSyncAt = null;
+
+function paperMoney(n) {
+  const sign = n < 0 ? '-' : '';
+  const [w, d] = Math.abs(n).toFixed(2).split('.');
+  return `${sign}$${Number(w).toLocaleString('en-GB')}.${d}`;
+}
+
+function paperPct(n, digits) {
+  const d = digits == null ? 1 : digits;
+  return `${n.toFixed(d)}%`;
+}
+
+function paperQty(n) {
+  return n.toLocaleString('en-GB');
+}
+
+function paperSignedMoney(n) {
+  const formatted = paperMoney(Math.abs(n));
+  if (n > 0) return '+' + formatted;
+  if (n < 0) return '-' + formatted;
+  return formatted;
+}
+
+function paperDuration(ms) {
+  if (ms < 0) ms = 0;
+  const totalMin = Math.floor(ms / 60000);
+  const days = Math.floor(totalMin / 1440);
+  const hours = Math.floor((totalMin % 1440) / 60);
+  const mins = totalMin % 60;
+  if (days > 0) return `${days}d ${hours}h`;
+  return `${hours}h ${String(mins).padStart(2, '0')}m`;
+}
+
+function paperIsFxWeekend(date) {
+  const d = date.getUTCDay();
+  const minutes = date.getUTCHours() * 60 + date.getUTCMinutes();
+  if (d === 6) return true;
+  if (d === 5 && minutes >= 22 * 60) return true;
+  if (d === 0 && minutes < 22 * 60) return true;
+  return false;
+}
+
+function paperNextOpen(from, hour) {
+  const next = new Date(from);
+  next.setUTCMilliseconds(0);
+  next.setUTCSeconds(0);
+  next.setUTCMinutes(0);
+  next.setUTCHours(hour);
+  if (next <= from) next.setUTCDate(next.getUTCDate() + 1);
+  while (paperIsFxWeekend(next)) {
+    next.setUTCDate(next.getUTCDate() + 1);
+    next.setUTCHours(hour, 0, 0, 0);
+  }
+  return next;
+}
+
+function paperSessionState(session, now) {
+  const wrap = session.openHour > session.closeHour;
+  const h = now.getUTCHours() + now.getUTCMinutes() / 60;
+  const inHours = wrap
+    ? (h >= session.openHour || h < session.closeHour)
+    : (h >= session.openHour && h < session.closeHour);
+  const open = inHours && !paperIsFxWeekend(now);
+
+  if (open) {
+    const closeAt = new Date(now);
+    closeAt.setUTCMilliseconds(0);
+    closeAt.setUTCSeconds(0);
+    closeAt.setUTCMinutes(0);
+    closeAt.setUTCHours(session.closeHour);
+    if (closeAt <= now) closeAt.setUTCDate(closeAt.getUTCDate() + 1);
+    return { open, label: `Closes in ${paperDuration(closeAt - now)}` };
+  }
+
+  return { open, label: `Opens in ${paperDuration(paperNextOpen(now, session.openHour) - now)}` };
+}
+
+function paperBotState(bot) {
+  const manual = !!paperManualHalt[bot.id];
+  const haltReason = manual ? 'Manual halt' : (bot.haltReason || '');
+  return { manual, haltReason, halted: !!haltReason };
+}
+
+function paperPolicy(bot, pos) {
+  const { halted } = paperBotState(bot);
+  if (halted) return 'deny-add';
+  return pos.policy;
+}
+
+function paperPolicyHtml(kind) {
+  if (kind === 'deny-add') {
+    return `<span class="paper-policy"><span class="paper-chip deny">deny add</span><span class="paper-chip allow">allow exit</span></span>`;
+  }
+  return `<span class="paper-policy"><span class="paper-chip allow">allow add</span><span class="paper-chip allow">allow exit</span></span>`;
+}
+
+function paperBarPct(used, cap) {
+  if (!cap) return 0;
+  return Math.max(0, Math.min(100, (used / cap) * 100));
+}
+
+function paperBarTone(used, cap) {
+  const p = cap ? used / cap : 0;
+  if (p >= 1) return 'cap';
+  if (p >= 0.75) return 'warn';
+  return 'ok';
+}
+
+function paperRenderSessions() {
+  const el = document.getElementById('paperSessions');
+  if (!el) return;
+  const now = new Date();
+  const states = PAPER_SESSIONS.map(s => ({ ...s, ...paperSessionState(s, now) }));
+  const londonOpen = states.find(s => s.id === 'london')?.open;
+  const nyOpen = states.find(s => s.id === 'newyork')?.open;
+  const tokyoOpen = states.find(s => s.id === 'tokyo')?.open;
+  let overlap = '';
+  if (londonOpen && nyOpen) overlap = 'London–NY overlap · peak FX liquidity';
+  else if (tokyoOpen && londonOpen) overlap = 'Tokyo–London overlap';
+  else if (states.every(s => !s.open)) overlap = 'FX weekend · market closed';
+
+  const clock = now.toLocaleString('en-GB', {
+    timeZone: 'UTC',
+    day: '2-digit',
+    month: 'short',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false,
+  }) + ' UTC';
+
+  el.innerHTML = `
+    <div class="paper-sessions-row">
+      ${states.map(s => `
+        <div class="paper-session ${s.open ? 'open' : 'closed'}">
+          <div class="paper-session-top">
+            <span class="paper-session-dot"></span>
+            <span class="paper-session-name">${s.name}</span>
+            <span class="paper-session-state">${s.open ? 'Open' : 'Closed'}</span>
+          </div>
+          <div class="paper-session-eta">${s.label}</div>
+        </div>
+      `).join('')}
+    </div>
+    <div class="paper-sessions-meta">
+      <span>${overlap || 'Session hours in UTC'}</span>
+      <span class="paper-sessions-clock">${clock}</span>
+    </div>
+  `;
+}
+
+function paperRenderSwitch() {
+  const el = document.getElementById('paperBotSwitch');
+  if (!el) return;
+  const pills = [{ id: 'all', label: 'All bots' }, ...PAPER_BOTS.map(b => ({ id: b.id, label: b.id }))];
+  el.innerHTML = pills.map(p => `
+    <button type="button" class="tbtn paper-bot-pill${paperSelectedBot === p.id ? ' active' : ''}" data-paper-bot="${p.id}">${esc(p.label)}</button>
+  `).join('');
+}
+
+function paperRenderSync() {
+  const el = document.getElementById('paperSync');
+  if (!el || !paperSyncAt) return;
+  const stamp = paperSyncAt.toLocaleString('en-GB', {
+    timeZone: 'UTC',
+    day: '2-digit',
+    month: 'short',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false,
+  });
+  el.innerHTML = `<span class="paper-sync-label">Last sync</span> ${stamp} UTC <span class="paper-sync-mock">mock</span>`;
+}
+
+function paperMetric(label, value, extra) {
+  return `<div class="paper-metric"><div class="label">${label}</div><div class="value">${value}</div>${extra || ''}</div>`;
+}
+
+function paperCapRow(label, display, used, cap) {
+  const tone = paperBarTone(used, cap);
+  return `
+    <div class="paper-cap ${tone}">
+      <div class="paper-cap-head">
+        <span>${label}</span>
+        <span>${display}</span>
+      </div>
+      <div class="paper-cap-track"><div class="paper-cap-fill" style="width:${paperBarPct(used, cap)}%"></div></div>
+    </div>
+  `;
+}
+
+function paperRiskPanel(bot) {
+  const { halted, haltReason, manual } = paperBotState(bot);
+  const dayPnl = bot.equity - bot.bodEquity;
+  return `
+    <section class="paper-risk-panel">
+      <div class="paper-risk-head">
+        <div>
+          <div class="paper-kicker">Risk status</div>
+          <h3 class="paper-risk-title">${esc(bot.id)}</h3>
+        </div>
+        <div class="paper-risk-actions">
+          <span class="bt-status-badge ${halted ? 'fail' : 'running'}">${halted ? 'HALTED' : 'RUNNING'}</span>
+          <button type="button" class="paper-toggle${manual ? ' on' : ''}" data-paper-halt="${bot.id}" aria-pressed="${manual ? 'true' : 'false'}">
+            <span class="paper-toggle-track"><span class="paper-toggle-knob"></span></span>
+            Manual halt
+          </button>
+        </div>
+      </div>
+      <div class="paper-halt-reason">
+        <span class="label">Halt reason</span>
+        <span class="${haltReason ? 'bt-neg' : 'bt-neutral'}">${haltReason ? esc(haltReason) : '—'}</span>
+      </div>
+      <div class="paper-risk-metrics">
+        ${paperMetric('Allocated capital', paperMoney(bot.allocated))}
+        ${paperMetric('Beginning-of-day equity', paperMoney(bot.bodEquity))}
+        ${paperMetric('Current equity', `<span class="${dayPnl >= 0 ? 'bt-pos' : 'bt-neg'}">${paperMoney(bot.equity)}</span>`)}
+      </div>
+      <div class="paper-caps">
+        ${paperCapRow('Current drawdown', `${paperPct(bot.drawdownPct)} / ${paperPct(bot.drawdownCap, 0)} cap`, bot.drawdownPct, bot.drawdownCap)}
+        ${paperCapRow('Daily loss', `${paperPct(bot.dailyLossPct, 2)} / ${paperPct(bot.dailyLossCap, 0)} cap`, bot.dailyLossPct, bot.dailyLossCap)}
+        ${paperCapRow('Daily new exposure', `${paperMoney(bot.exposureUsed)} / ${paperMoney(bot.exposureLimit)}`, bot.exposureUsed, bot.exposureLimit)}
+      </div>
+    </section>
+  `;
+}
+
+function paperRiskCard(bot) {
+  const { halted, haltReason } = paperBotState(bot);
+  const dayPnl = bot.equity - bot.bodEquity;
+  return `
+    <button type="button" class="paper-risk-card" data-paper-bot="${bot.id}">
+      <div class="paper-risk-card-head">
+        <span class="paper-risk-card-name">${esc(bot.id)}</span>
+        <span class="bt-status-badge ${halted ? 'fail' : 'running'}">${halted ? 'HALTED' : 'RUNNING'}</span>
+      </div>
+      <div class="paper-risk-card-equity ${dayPnl >= 0 ? 'bt-pos' : 'bt-neg'}">${paperMoney(bot.equity)}</div>
+      <div class="paper-risk-card-stats">
+        <span>DD ${paperPct(bot.drawdownPct)}</span>
+        <span>Day ${dayPnl >= 0 ? '+' : ''}${paperPct((dayPnl / bot.bodEquity) * 100, 2)}</span>
+      </div>
+      <div class="paper-cap-track"><div class="paper-cap-fill ${paperBarTone(bot.drawdownPct, bot.drawdownCap)}" style="width:${paperBarPct(bot.drawdownPct, bot.drawdownCap)}%"></div></div>
+      <div class="paper-risk-card-halt">${haltReason ? esc(haltReason) : 'No halt'}</div>
+    </button>
+  `;
+}
+
+function paperRenderRisk() {
+  const el = document.getElementById('paperRisk');
+  if (!el) return;
+  if (paperSelectedBot === 'all') {
+    const totalEq = PAPER_BOTS.reduce((s, b) => s + b.equity, 0);
+    const totalAlloc = PAPER_BOTS.reduce((s, b) => s + b.allocated, 0);
+    const haltedN = PAPER_BOTS.filter(b => paperBotState(b).halted).length;
+    el.innerHTML = `
+      <div class="paper-all-summary">
+        <div class="gcard"><div class="label">Paper equity</div><div class="value">${paperMoney(totalEq)}</div></div>
+        <div class="gcard"><div class="label">Allocated</div><div class="value">${paperMoney(totalAlloc)}</div></div>
+        <div class="gcard"><div class="label">Bots running</div><div class="value">${PAPER_BOTS.length - haltedN}</div></div>
+        <div class="gcard"><div class="label">Halted</div><div class="value${haltedN ? ' neg' : ''}">${haltedN}</div></div>
+      </div>
+      <div class="paper-risk-grid">${PAPER_BOTS.map(paperRiskCard).join('')}</div>
+      <p class="paper-footnote paper-hint">Click a bot card or pill to open its full risk panel and halt control.</p>
+    `;
+    return;
+  }
+  const bot = PAPER_BOTS.find(b => b.id === paperSelectedBot);
+  el.innerHTML = bot ? paperRiskPanel(bot) : '';
+}
+
+function paperRow(bot, pos) {
+  const showBot = paperSelectedBot === 'all';
+  const policy = paperPolicy(bot, pos);
+  const sideCls = pos.side === 'Long' ? 'long' : 'short';
+  return `
+    <tr>
+      ${showBot ? `<td class="col-text"><div class="bt-bot-name">${esc(bot.id)}</div></td>` : ''}
+      <td class="col-text bt-neutral">${esc(pos.symbol)}</td>
+      <td class="col-text"><span class="paper-side ${sideCls}">${pos.side}</span></td>
+      <td class="col-num bt-neutral">${paperQty(pos.qty)}</td>
+      <td class="col-num bt-neutral">${paperMoney(pos.marketValue)}</td>
+      <td class="col-num bt-neutral">${paperPct(pos.alloc)}</td>
+      <td class="col-num ${pos.pnl >= 0 ? 'bt-pos' : 'bt-neg'}">${paperSignedMoney(pos.pnl)}</td>
+      <td class="col-num ${pos.swap >= 0 ? 'bt-pos' : 'bt-neg'}">${paperSignedMoney(pos.swap)}</td>
+      <td class="col-text">${paperPolicyHtml(policy)}</td>
+      <td class="col-text"><span class="paper-tag">${esc(pos.tag)}</span></td>
+    </tr>
+  `;
+}
+
+function paperRenderPositions() {
+  const el = document.getElementById('paperPositions');
+  if (!el) return;
+  const bots = paperSelectedBot === 'all' ? PAPER_BOTS : PAPER_BOTS.filter(b => b.id === paperSelectedBot);
+  const rows = bots.flatMap(bot => bot.positions.map(pos => paperRow(bot, pos)));
+  const showBot = paperSelectedBot === 'all';
+  el.innerHTML = `
+    <section class="paper-positions">
+      <div class="paper-section-head">
+        <h3>Open positions</h3>
+        <span class="paper-count">${rows.length} ${rows.length === 1 ? 'position' : 'positions'}</span>
+      </div>
+      <div class="paper-table-wrap">
+        <table class="paper-table">
+          <thead>
+            <tr>
+              ${showBot ? '<th class="col-text">Bot</th>' : ''}
+              <th class="col-text">Symbol</th>
+              <th class="col-text">Side</th>
+              <th class="col-num">Quantity</th>
+              <th class="col-num">Market value</th>
+              <th class="col-num">Alloc %</th>
+              <th class="col-num">Unreal. P&amp;L</th>
+              <th class="col-num">Swap</th>
+              <th class="col-text">Policy</th>
+              <th class="col-text">Tag</th>
+            </tr>
+          </thead>
+          <tbody>${rows.join('')}</tbody>
+        </table>
+      </div>
+      <p class="paper-footnote">Quantity in units. Swap is overnight financing accrued since the position opened. Policy badges are the mock risk-engine output (deny add / allow exit when a pair is over its allocation cap or the bot is halted).</p>
+    </section>
+  `;
+}
+
+function paperRender() {
+  paperRenderSwitch();
+  paperRenderSync();
+  paperRenderRisk();
+  paperRenderPositions();
+}
+
+function paperSelectBot(id) {
+  paperSelectedBot = id;
+  paperRender();
+}
+
+function paperToggleHalt(id) {
+  paperManualHalt[id] = !paperManualHalt[id];
+  paperRender();
+}
+
+function initPaperMock() {
+  paperSyncAt = new Date();
+  const root = document.getElementById('tab-paper');
+  if (!root) return;
+  root.addEventListener('click', (e) => {
+    const haltBtn = e.target.closest('[data-paper-halt]');
+    if (haltBtn) {
+      paperToggleHalt(haltBtn.getAttribute('data-paper-halt'));
+      return;
+    }
+    const botBtn = e.target.closest('[data-paper-bot]');
+    if (botBtn) paperSelectBot(botBtn.getAttribute('data-paper-bot'));
+  });
+  paperRenderSessions();
+  paperRender();
+  setInterval(paperRenderSessions, 1000);
+}
+
 renderLiveDashboard();
 sizeMarketFilter();
 syncSortButton();
 refreshBacktest(true);
+initPaperMock();
 </script>
 </body>
 </html>

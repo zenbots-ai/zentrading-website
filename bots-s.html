@@ -41,6 +41,7 @@
     <button class="tab-btn" onclick="switchTab('live',this)">Live Trades</button>
   </div>
   <div class="bt-header" id="scHeader">
+    <button class="tbtn" id="scSortBtn" onclick="toggleScreenerSort()" title="Sorting by Crypto"><i class="ri-sort-asc"></i><span id="scSortLabel">Crypto</span></button>
     <button class="tbtn" id="scInfoBtn"><i class="ri-information-line"></i></button>
     <button class="bt-add-btn" id="scRefreshBtn" onclick="refreshScreener()"><i class="ri-refresh-line"></i></button>
     <div class="bt-info-popover" id="scInfoPopover">Fast pre-screen of trading ideas using a Profit Factor threshold before promoting to a full LEAN backtest. These are not final validated results, see the Backtesting tab for that.<br><br><span class="sc-key tbc">TBC</span>: relevant, not yet tested<br><span class="sc-key pass">Pass</span>: ≥ 1.2 PF, ready for backtest<br><span class="sc-key parked">Parked</span>: promising, unresolved<br><span class="sc-key retired">Retired</span>: no edge<br><span class="sc-key anti-edge">Anti-edge</span>: worse than random</div>
@@ -71,12 +72,12 @@
       <thead>
         <tr>
           <th class="col-text sc-col-bot">Bot</th>
+          <th class="sc-col-mkt">Crypto</th>
           <th class="sc-col-mkt">Forex</th>
           <th class="sc-col-mkt">ETF</th>
           <th class="sc-col-mkt">Indices</th>
           <th class="sc-col-mkt">Commodities</th>
           <th class="sc-col-mkt">Equity</th>
-          <th class="sc-col-mkt">Crypto</th>
         </tr>
       </thead>
       <tbody id="scTableBody"></tbody>
@@ -1229,7 +1230,16 @@ function initPaperMock() {
 /* ═══════════════════════════════════════════
    Screener tab — reads SCREENER_SHEET_TAB.
 ═══════════════════════════════════════════ */
-const SCREENER_MARKETS = ['forex', 'etf', 'indices', 'commodities', 'equity', 'crypto'];
+const SCREENER_MARKETS = ['crypto', 'forex', 'etf', 'indices', 'commodities', 'equity'];
+const SC_SORT_LABELS = {
+  crypto: 'Crypto',
+  forex: 'Forex',
+  etf: 'ETF',
+  indices: 'Indices',
+  commodities: 'Commodities',
+  equity: 'Equity',
+};
+let scSortBy = 'crypto';
 let SCREENER_DATA = [];
 
 function parseScreenerStatus(val) {
@@ -1305,6 +1315,42 @@ function screenerRowHtml(s) {
   `;
 }
 
+function screenerCellSortTier(cell) {
+  if (cell && cell.pf != null && !isNaN(Number(cell.pf))) return 0;
+  if (cell && cell.status === 'tbc') return 1;
+  return 2;
+}
+
+function compareScreenerRows(a, b, market) {
+  const ca = a.markets[market];
+  const cb = b.markets[market];
+  const ta = screenerCellSortTier(ca);
+  const tb = screenerCellSortTier(cb);
+  if (ta !== tb) return ta - tb;
+  if (ta === 0) return Number(cb.pf) - Number(ca.pf);
+  return String(a.name || '').localeCompare(String(b.name || ''));
+}
+
+function syncScSortButton() {
+  const btn = document.getElementById('scSortBtn');
+  const label = document.getElementById('scSortLabel');
+  const sortLabel = SC_SORT_LABELS[scSortBy] || SC_SORT_LABELS.crypto;
+  const active = scSortBy !== 'crypto';
+  if (label) label.textContent = sortLabel;
+  if (btn) {
+    btn.classList.toggle('active', active);
+    btn.title = `Sorting by ${sortLabel}`;
+    btn.setAttribute('aria-pressed', active ? 'true' : 'false');
+  }
+}
+
+function toggleScreenerSort() {
+  const i = SCREENER_MARKETS.indexOf(scSortBy);
+  scSortBy = SCREENER_MARKETS[(i + 1) % SCREENER_MARKETS.length];
+  syncScSortButton();
+  renderScreener();
+}
+
 function renderScreener() {
   const body = document.getElementById('scTableBody');
   const empty = document.getElementById('scEmpty');
@@ -1315,7 +1361,8 @@ function renderScreener() {
     return;
   }
   if (empty) empty.style.display = 'none';
-  body.innerHTML = SCREENER_DATA.map(screenerRowHtml).join('');
+  const rows = SCREENER_DATA.slice().sort((a, b) => compareScreenerRows(a, b, scSortBy));
+  body.innerHTML = rows.map(screenerRowHtml).join('');
 }
 
 function openScreenerDetail(id) {
@@ -1372,6 +1419,7 @@ function initScreenerMock() {
     if (!pop || !btn) return;
     if (!pop.contains(e.target) && !btn.contains(e.target)) pop.classList.remove('visible');
   });
+  syncScSortButton();
   refreshScreener();
 }
 

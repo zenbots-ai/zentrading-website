@@ -65,7 +65,6 @@
 </div>
 
 <div class="tab-panel active" id="tab-screener">
-  <!-- SCREENER MOCKUP: placeholder/dummy data only. Not wired to Sheets, LEAN, or any live source. -->
   <div class="sc-wrap">
     <div class="bt-table-wrap bt-table-scroll sc-table-scroll" id="scTableScroll">
     <table class="bt-table sc-table">
@@ -82,6 +81,7 @@
       </thead>
       <tbody id="scTableBody"></tbody>
     </table>
+    <div class="bt-empty" id="scEmpty">No screener ideas yet.</div>
     </div>
   </div>
 </div>
@@ -174,7 +174,8 @@
 <script>
 const SHEET_ID = '1dud-FOCKFuxc64JVYXJNtkUKBCZNOkz-3RXZzpgncWQ';
 const API_KEY = 'AIzaSyDryfSczB-VDV7bDLF-OVMe9q6itfH5RL8';
-const SHEET_TAB = 'Backtesting';
+const SHEET_TAB = 'Backtesting-Steve';
+const SCREENER_SHEET_TAB = 'Screener-Steve';
 
 function showPageLoader() {
   const el = document.getElementById('pageLoader');
@@ -304,8 +305,10 @@ function esc(v) {
   return String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 }
 
-async function fetchSheetData() {
-  const url = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${SHEET_TAB}?key=${API_KEY}`;
+async function fetchSheetData(tab) {
+  const name = tab || SHEET_TAB;
+  const range = encodeURIComponent(`'${name}'`);
+  const url = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${range}?key=${API_KEY}`;
   const res = await fetch(url);
   if (!res.ok) throw new Error('Sheet fetch failed');
   const data = await res.json();
@@ -1224,163 +1227,65 @@ function initPaperMock() {
 }
 
 /* ═══════════════════════════════════════════
-   Screener tab mockup — placeholder data only.
-   Not wired to Sheets, LEAN, or any live source.
-   Do not reuse these numbers as validated results.
+   Screener tab — reads SCREENER_SHEET_TAB.
 ═══════════════════════════════════════════ */
 const SCREENER_MARKETS = ['forex', 'etf', 'indices', 'commodities', 'equity', 'crypto'];
-const SCREENER_DATA = [
-  {
-    id: 'tokyo-fix-fade',
-    name: 'Tokyo Fix Fade',
-    mechanism: 'Fade the well-known 15:00 JST USD/JPY fixing window, where Tokyo banks concentrate fixing-related flow. Enter against the pre-fix impulse once the print hits and hold through the post-fix mean-reversion.',
-    variations: ['5-min vs 15-min entry delay after the fix', 'USD/JPY only vs G3 JPY crosses', 'Hard 20-pip stop vs 1.2× ATR stop'],
-    source: 'Internal note on WM/Reuters Tokyo-fix literature; Lyons-style fixing-flow papers. Pre-screened in a lightweight VectorBT pass — not a LEAN run.',
-    markets: {
-      forex: { pf: 1.42, status: 'pass' },
-      etf: null,
-      indices: null,
-      commodities: null,
-      equity: null,
-      crypto: null,
-    },
-  },
-  {
-    id: 'month-end-rebalancing',
-    name: 'Month-End Rebalancing',
-    mechanism: 'Harvest the predictable window around month-end when benchmarked funds rebalance to target weights. Fade the last-hour flow into the close, then reverse the following open.',
-    variations: ['Last 30 vs last 60 minutes of the month', 'Large-cap only vs all-cap', 'With / without futures roll days excluded'],
-    source: 'Pension and index-rebalance calendar notes. Equity and ETF legs only — crypto and spot FX have no equivalent forced-flow calendar.',
-    markets: {
-      forex: null,
-      etf: { status: 'tbc' },
-      indices: { pf: 0.88, status: 'retired' },
-      commodities: null,
-      equity: { pf: 0.94, status: 'retired' },
-      crypto: null,
-    },
-  },
-  {
-    id: 'imm-roll-squeeze',
-    name: 'IMM Roll Squeeze',
-    mechanism: 'Trade the quarterly IMM futures roll in G10 FX, fading the spot move that accompanies the futures-to-spot basis unwind in the three sessions around roll.',
-    variations: ['EUR, GBP, JPY only vs full G10', 'Enter T-1 vs T+0 of roll Thursday', 'Basis-widening filter on / off'],
-    source: 'CME IMM calendar + internal roll-volume notes. Mechanism is futures-specific; no crypto or cash-equity analogue.',
-    markets: {
-      forex: { pf: 1.08, status: 'retired' },
-      etf: null,
-      indices: null,
-      commodities: null,
-      equity: null,
-      crypto: null,
-    },
-  },
-  {
-    id: 'london-open-drift',
-    name: 'London Open Drift',
-    mechanism: 'Capture the directional drift in G10 FX in the first 90 minutes after the London cash open, conditioned on overnight range and whether Tokyo left a one-sided book.',
-    variations: ['60-min vs 90-min hold', 'Range-compression filter (Tokyo ATR < 20-day median)', 'Long-only vs long/short'],
-    source: 'Session-clock research notebook. Equity cash open is a different microstructure — marked excluded there. Crypto has no London cash fix.',
-    markets: {
-      forex: { status: 'tbc' },
-      etf: null,
-      indices: { pf: 0.91, status: 'retired' },
-      commodities: null,
-      equity: null,
-      crypto: null,
-    },
-  },
-  {
-    id: 'ny-close-fade',
-    name: 'NY Close Fade',
-    mechanism: 'Fade late-New-York mean-reversion in FX after the US equity cash close, when option-desk delta hedging and residual US flow thin out.',
-    variations: ['Enter 16:00 vs 16:30 New York', 'Fade only if NY session range > 1.0× ATR', 'Hold to Tokyo open vs hold 4 hours'],
-    source: 'NY-close flow notes. Crypto print was worse than a shuffled-return baseline, so it sits as anti-edge.',
-    markets: {
-      forex: { pf: 0.87, status: 'retired' },
-      etf: null,
-      indices: { pf: 0.79, status: 'retired' },
-      commodities: null,
-      equity: null,
-      crypto: { pf: 0.62, status: 'anti-edge' },
-    },
-  },
-  {
-    id: 'orb-15-break',
-    name: 'ORB 15-min Break',
-    mechanism: 'Trade a break of the first 15-minute opening range, with a volatility expansion filter so the range itself is not a dead tape. Stop on a return into the range; target 1.5× range.',
-    variations: ['15-min vs 30-min opening range', 'ATR-expansion gate on / off', 'Cash index vs liquid index futures'],
-    source: 'Classic opening-range playbook, pre-screened on index futures and large-cap names. FX cash open is too diffuse — excluded. Crypto 24h session has no true cash open.',
-    markets: {
-      forex: null,
-      etf: { pf: 1.02, status: 'retired' },
-      indices: { pf: 1.38, status: 'parked' },
-      commodities: null,
-      equity: { status: 'tbc' },
-      crypto: null,
-    },
-  },
-  {
-    id: 'atr-expansion-fade',
-    name: 'ATR Expansion Fade',
-    mechanism: 'Fade a same-session ATR expansion once price stretches beyond 1.8× the 14-day ATR from the session open, looking for a snap-back into the prior value area.',
-    variations: ['1.6× vs 1.8× vs 2.2× ATR trigger', 'Commodities only vs G10 FX overlay', 'Time stop at session close vs 2× ATR target'],
-    source: 'Commodity session notes (WTI, gold, copper). Equity names were dropped before the screen — too much event risk around the stretch.',
-    markets: {
-      forex: { pf: 1.11, status: 'pass' },
-      etf: null,
-      indices: null,
-      commodities: { pf: 0.96, status: 'retired' },
-      equity: null,
-      crypto: null,
-    },
-  },
-  {
-    id: 'rsi-2-bounce',
-    name: 'RSI-2 Bounce',
-    mechanism: 'Buy a 2-period RSI close below 10 inside a higher-timeframe uptrend (close above the 200-day). Exit on a close back above the 5-day high or a time stop of 5 sessions.',
-    variations: ['RSI-2 < 5 vs < 10 vs < 15', 'Trend filter: 100-day vs 200-day', 'Long-only vs symmetric short'],
-    source: 'Connors-style RSI-2 short-term mean reversion. Equity and ETF are the intended habitat; crypto omitted (no stable cash session).',
-    markets: {
-      forex: { pf: 1.05, status: 'retired' },
-      etf: { status: 'tbc' },
-      indices: { pf: 0.98, status: 'retired' },
-      commodities: null,
-      equity: { pf: 0.89, status: 'retired' },
-      crypto: null,
-    },
-  },
-  {
-    id: 'overnight-gap-fill',
-    name: 'Overnight Gap Fill',
-    mechanism: 'Fade overnight gaps that open beyond 0.6× ATR from the prior close, fading back toward the previous close during the first 90 minutes of the cash session.',
-    variations: ['0.4× vs 0.6× vs 0.8× ATR gap filter', 'Fade only with-trend gaps vs only against-trend', 'Exit at fill vs exit at 50% fill'],
-    source: 'Cash-equity gap literature. Crypto marked excluded — 24h tape has no overnight gap in the same sense.',
-    markets: {
-      forex: null,
-      etf: { pf: 0.84, status: 'retired' },
-      indices: { status: 'tbc' },
-      commodities: null,
-      equity: { pf: 0.91, status: 'retired' },
-      crypto: null,
-    },
-  },
-  {
-    id: 'perp-funding-harvest',
-    name: 'Perp Funding Harvest',
-    mechanism: 'Harvest persistently elevated perpetual-futures funding by holding the cash/spot versus the perp when the 8-hour rate stays above a cost-adjusted threshold for several consecutive prints.',
-    variations: ['8h rate > 0.03% vs > 0.05%', 'BTC/ETH only vs top-10 alts', 'Hold through one funding vs hold while rate stays elevated'],
-    source: 'Perp funding notebooks. Mechanism is crypto-native — no analogue in cash FX, ETFs, or listed equity.',
-    markets: {
-      forex: null,
-      etf: null,
-      indices: null,
-      commodities: null,
-      equity: null,
-      crypto: { status: 'tbc' },
-    },
-  },
-];
+let SCREENER_DATA = [];
+
+function parseScreenerStatus(val) {
+  const t = String(val || '').trim().toLowerCase().replace(/\s+/g, '-');
+  if (t === 'anti-edge' || t === 'antiedge') return 'anti-edge';
+  if (t === 'tbc' || t === 'pass' || t === 'parked' || t === 'retired') return t;
+  return '';
+}
+
+function parseScreenerCell(raw, rowStatus) {
+  const text = String(raw ?? '').trim();
+  if (!text || text === '—' || text === '-' || text.toLowerCase() === 'n/a') return null;
+  const statusOnly = parseScreenerStatus(text);
+  if (statusOnly === 'tbc') return { status: 'tbc' };
+  if (statusOnly && !/\d/.test(text)) return { status: statusOnly };
+  const n = parseFloat(text.replace(/[%£$,]/g, ''));
+  if (isNaN(n)) return null;
+  return { pf: n, status: rowStatus || (n >= 1.2 ? 'pass' : '') };
+}
+
+function parseScreenerRows(values) {
+  const headers = ((values && values[0]) || []).map(h => String(h).trim().toLowerCase());
+  const col = (name) => headers.indexOf(name);
+  const ix = {
+    bot: col('bot'),
+    forex: col('forex'),
+    etf: col('etf'),
+    indices: col('indices'),
+    commodities: col('commodities'),
+    equity: col('equity'),
+    crypto: col('crypto'),
+    status: col('status'),
+    notes: col('notes'),
+  };
+  return ((values || []).slice(1)).filter(r => r && r.some(c => String(c).trim())).map((r, i) => {
+    const name = String(ix.bot >= 0 ? r[ix.bot] : '').trim();
+    const rowStatus = parseScreenerStatus(ix.status >= 0 ? r[ix.status] : '');
+    const notes = String(ix.notes >= 0 ? r[ix.notes] : '').trim();
+    const cellAt = (key) => (ix[key] >= 0 ? r[ix[key]] : '');
+    return {
+      id: `sc-${i}-${name.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`,
+      name,
+      mechanism: '',
+      variations: [],
+      source: notes,
+      markets: {
+        forex: parseScreenerCell(cellAt('forex'), rowStatus),
+        etf: parseScreenerCell(cellAt('etf'), rowStatus),
+        indices: parseScreenerCell(cellAt('indices'), rowStatus),
+        commodities: parseScreenerCell(cellAt('commodities'), rowStatus),
+        equity: parseScreenerCell(cellAt('equity'), rowStatus),
+        crypto: parseScreenerCell(cellAt('crypto'), rowStatus),
+      },
+    };
+  }).filter(s => s.name);
+}
 
 function screenerCellHtml(cell) {
   if (!cell || cell.pf == null) {
@@ -1402,7 +1307,14 @@ function screenerRowHtml(s) {
 
 function renderScreener() {
   const body = document.getElementById('scTableBody');
+  const empty = document.getElementById('scEmpty');
   if (!body) return;
+  if (!SCREENER_DATA.length) {
+    body.innerHTML = '';
+    if (empty) empty.style.display = 'block';
+    return;
+  }
+  if (empty) empty.style.display = 'none';
   body.innerHTML = SCREENER_DATA.map(screenerRowHtml).join('');
 }
 
@@ -1410,26 +1322,33 @@ function openScreenerDetail(id) {
   const s = SCREENER_DATA.find(row => row.id === id);
   if (!s) return;
   const variations = (s.variations || []).map(v => `<li>${esc(v)}</li>`).join('');
+  const sections = [];
+  if (s.mechanism) {
+    sections.push(`<div class="sc-pop-kicker">Mechanism</div><div class="sc-pop-body">${esc(s.mechanism)}</div>`);
+  }
+  if (variations) {
+    sections.push(`<div class="sc-pop-kicker">Variations tested</div><div class="sc-pop-body"><ul>${variations}</ul></div>`);
+  }
+  if (s.source) {
+    sections.push(`<div class="sc-pop-kicker">Notes</div><div class="sc-pop-body">${esc(s.source)}</div>`);
+  }
   document.getElementById('popoverTitle').textContent = s.name;
-  document.getElementById('popoverBody').innerHTML = `
-    <div class="sc-pop-kicker">Mechanism</div>
-    <div class="sc-pop-body">${esc(s.mechanism)}</div>
-    <div class="sc-pop-kicker">Variations tested</div>
-    <div class="sc-pop-body"><ul>${variations}</ul></div>
-    <div class="sc-pop-kicker">Source notes</div>
-    <div class="sc-pop-body">${esc(s.source)}</div>
-  `;
+  document.getElementById('popoverBody').innerHTML = sections.join('') || '<div class="sc-pop-body">No notes yet.</div>';
   document.getElementById('scInfoPopover')?.classList.remove('visible');
   document.getElementById('popoverOverlay').classList.add('visible');
 }
 
-function refreshScreener() {
+async function refreshScreener() {
   const scroll = document.getElementById('scTableScroll');
   if (scroll) scroll.classList.add('is-loading');
-  setTimeout(() => {
-    renderScreener();
-    if (scroll) scroll.classList.remove('is-loading');
-  }, 280);
+  try {
+    const values = await fetchSheetData(SCREENER_SHEET_TAB);
+    SCREENER_DATA = parseScreenerRows(values);
+  } catch (e) {
+    SCREENER_DATA = [];
+  }
+  renderScreener();
+  if (scroll) scroll.classList.remove('is-loading');
 }
 
 function toggleScInfo(e) {
@@ -1453,7 +1372,7 @@ function initScreenerMock() {
     if (!pop || !btn) return;
     if (!pop.contains(e.target) && !btn.contains(e.target)) pop.classList.remove('visible');
   });
-  renderScreener();
+  refreshScreener();
 }
 
 renderLiveDashboard();

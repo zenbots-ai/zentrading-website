@@ -1860,6 +1860,9 @@ body:has(.nav) {
 .bt-info-popover.visible {
   display: block;
 }
+#scHeader .bt-info-popover {
+  width: 280px;
+}
 #btSortBtn {
   white-space: nowrap;
   padding-left: 12px;
@@ -1871,13 +1874,17 @@ body:has(.nav) {
 }
 #btInfoBtn,
 #btRefreshBtn,
-#btExportBtn {
+#btExportBtn,
+#scInfoBtn,
+#scRefreshBtn {
   padding-top: 6px;
   padding-bottom: 6px;
 }
 #btInfoBtn i,
 #btRefreshBtn i,
-#btExportBtn i {
+#btExportBtn i,
+#scInfoBtn i,
+#scRefreshBtn i {
   font-size: 18px;
   line-height: 1;
   display: inline-flex;
@@ -2793,4 +2800,96 @@ body:has(.nav) {
   #tab-paper .paper-caps {
     grid-template-columns: 1fr;
   }
+}
+
+/* ═══════════════════════════════════════════
+   SCREENER TAB (mockup only — scoped)
+═══════════════════════════════════════════ */
+#tab-screener .sc-wrap {
+  padding: 0 20px 20px;
+}
+#tab-screener .sc-table-scroll {
+  overflow-x: auto;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+  padding: 0;
+}
+#tab-screener .sc-table-scroll::-webkit-scrollbar {
+  display: none;
+}
+#tab-screener .sc-table {
+  min-width: 920px;
+}
+#tab-screener .sc-table th.sc-col-bot {
+  min-width: 160px;
+}
+#tab-screener .sc-table th.sc-col-mkt,
+#tab-screener .sc-table td.sc-mkt {
+  text-align: right;
+  min-width: 96px;
+}
+#tab-screener .sc-pf {
+  font-size: 13px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.2;
+}
+#tab-screener .sc-pf.pass {
+  color: #09FB9D;
+}
+#tab-screener .sc-pf.parked {
+  color: #FF9900;
+}
+#tab-screener .sc-pf.retired {
+  color: #999999;
+}
+#tab-screener .sc-pf.anti-edge {
+  color: #FF6D46;
+}
+#tab-screener .bt-status-badge.tbc {
+  background: rgba(156,240,250,0.15);
+  color: #9CF0FA;
+}
+#tab-screener .sc-row {
+  cursor: pointer;
+}
+#scInfoPopover .sc-key {
+  font-weight: 700;
+}
+#scInfoPopover .sc-key.tbc {
+  color: #9CF0FA;
+}
+#scInfoPopover .sc-key.pass {
+  color: #09FB9D;
+}
+#scInfoPopover .sc-key.parked {
+  color: #FF9900;
+}
+#scInfoPopover .sc-key.retired {
+  color: #999999;
+}
+#scInfoPopover .sc-key.anti-edge {
+  color: #FF6D46;
+}
+#popover .sc-pop-kicker {
+  font-size: 12px;
+  font-weight: 700;
+  color: #FFFFF2;
+  margin: 12px 0 6px;
+}
+#popover .sc-pop-kicker:first-child {
+  margin-top: 0;
+}
+#popover .sc-pop-body {
+  font-size: 13px;
+  color: #999999;
+  font-weight: 500;
+  line-height: 1.55;
+}
+#popover .sc-pop-body ul {
+  margin: 0;
+  padding-left: 16px;
+}
+#popover .sc-pop-body li + li {
+  margin-top: 4px;
 }

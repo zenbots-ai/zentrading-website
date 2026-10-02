@@ -2836,6 +2836,19 @@ body:has(.nav) {
   font-variant-numeric: tabular-nums;
   line-height: 1.2;
 }
+.sc-crypto-pair {
+  display: inline-flex;
+  align-items: center;
+  vertical-align: middle;
+  line-height: 1;
+}
+.sc-spark {
+  display: block;
+  width: 60px;
+  max-height: 1.6em;
+  margin-right: 15px;
+  flex: none;
+}
 #tab-screener .sc-pf.pass {
   color: #09FB9D;
 }

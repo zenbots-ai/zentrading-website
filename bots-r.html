@@ -1241,6 +1241,7 @@ const SC_SORT_LABELS = {
 };
 let scSortBy = 'crypto';
 let SCREENER_DATA = [];
+let screenerCharts = [];
 
 function parseScreenerStatus(val) {
   const t = String(val || '').trim().toLowerCase().replace(/\s+/g, '-');
@@ -1255,9 +1256,32 @@ function parseScreenerCell(raw, rowStatus) {
   const statusOnly = parseScreenerStatus(text);
   if (statusOnly === 'tbc') return { status: 'tbc' };
   if (statusOnly && !/\d/.test(text)) return { status: statusOnly };
-  const n = parseFloat(text.replace(/[%£$,]/g, ''));
-  if (isNaN(n)) return null;
+  let n;
+  if (text.toLowerCase() === 'inf') {
+    n = Infinity;
+  } else {
+    n = parseFloat(text.replace(/[%£$,]/g, ''));
+    if (isNaN(n)) return null;
+  }
   return { pf: n, status: rowStatus || (n >= 1.2 ? 'pass' : '') };
+}
+
+function parseCryptoSparkline(raw) {
+  const text = String(raw ?? '').trim();
+  if (!text) return null;
+  const series = [];
+  for (const part of text.split(',')) {
+    const token = part.trim();
+    if (!token) continue;
+    const n = Number(token);
+    if (Number.isFinite(n)) series.push(n);
+  }
+  return series.length ? series : null;
+}
+
+function parseCryptoDirection(raw) {
+  const text = String(raw ?? '').trim().toLowerCase();
+  return text === 'short' ? 'short' : 'long';
 }
 
 function parseScreenerRows(values) {
@@ -1271,6 +1295,8 @@ function parseScreenerRows(values) {
     commodities: col('commodities'),
     equity: col('equity'),
     crypto: col('crypto'),
+    cryptoSpark: col('crypto_spark'),
+    cryptoDirection: col('crypto_direction'),
     status: col('status'),
     notes: col('notes'),
   };
@@ -1285,6 +1311,8 @@ function parseScreenerRows(values) {
       mechanism: '',
       variations: [],
       source: notes,
+      cryptoSparkline: parseCryptoSparkline(cellAt('cryptoSpark')),
+      cryptoDirection: parseCryptoDirection(cellAt('cryptoDirection')),
       markets: {
         forex: parseScreenerCell(cellAt('forex'), rowStatus),
         etf: parseScreenerCell(cellAt('etf'), rowStatus),
@@ -1297,16 +1325,26 @@ function parseScreenerRows(values) {
   }).filter(s => s.name);
 }
 
-function screenerCellHtml(cell) {
+function screenerCellHtml(cell, sparkline, rowId) {
+  let html;
   if (!cell || cell.pf == null) {
-    if (cell && cell.status === 'tbc') return '<span class="bt-status-badge tbc">TBC</span>';
-    return '—';
+    html = (cell && cell.status === 'tbc') ? '<span class="bt-status-badge tbc">TBC</span>' : '—';
+  } else {
+    const label = cell.pf === Infinity ? '∞' : Number(cell.pf).toFixed(2);
+    html = `<span class="sc-pf ${esc(cell.status)}">${esc(label)}</span>`;
   }
-  return `<span class="sc-pf ${esc(cell.status)}">${esc(Number(cell.pf).toFixed(2))}</span>`;
+  if (sparkline && sparkline.length && rowId) {
+    html = `<span class="sc-crypto-pair"><canvas class="sc-spark" id="spark-${esc(rowId)}" width="60" height="20"></canvas>${html}</span>`;
+  }
+  return html;
 }
 
 function screenerRowHtml(s) {
-  const cells = SCREENER_MARKETS.map(m => `<td class="col-num sc-mkt bt-neutral">${screenerCellHtml(s.markets[m])}</td>`).join('');
+  const cells = SCREENER_MARKETS.map(m => {
+    const sparkline = m === 'crypto' ? s.cryptoSparkline : null;
+    const rowId = m === 'crypto' ? s.id : '';
+    return `<td class="col-num sc-mkt bt-neutral">${screenerCellHtml(s.markets[m], sparkline, rowId)}</td>`;
+  }).join('');
   return `
     <tr class="sc-row" data-sc-id="${esc(s.id)}">
       <td class="col-text sc-col-bot"><div class="bt-bot-name">${esc(s.name)}</div></td>
@@ -1351,7 +1389,36 @@ function toggleScreenerSort() {
   renderScreener();
 }
 
+function renderSparkline(canvas, data, direction) {
+  if (typeof Chart === 'undefined' || !canvas || !data || !data.length) return;
+  const borderColor = String(direction || '').toLowerCase() === 'short' ? '#E74C3C' : '#2ECC71';
+  screenerCharts.push(new Chart(canvas, {
+    type: 'line',
+    data: {
+      labels: data.map(() => ''),
+      datasets: [{
+        data: data,
+        borderColor: borderColor,
+        borderWidth: 1.5,
+        pointRadius: 0,
+        fill: false,
+        tension: 0.3
+      }]
+    },
+    options: {
+      responsive: false,
+      maintainAspectRatio: false,
+      animation: false,
+      plugins: { legend: { display: false }, tooltip: { enabled: false } },
+      scales: { x: { display: false }, y: { display: false } }
+    }
+  }));
+  canvas.style.display = 'inline-block';
+}
+
 function renderScreener() {
+  screenerCharts.forEach(chart => chart.destroy());
+  screenerCharts = [];
   const body = document.getElementById('scTableBody');
   const empty = document.getElementById('scEmpty');
   if (!body) return;
@@ -1363,6 +1430,11 @@ function renderScreener() {
   if (empty) empty.style.display = 'none';
   const rows = SCREENER_DATA.slice().sort((a, b) => compareScreenerRows(a, b, scSortBy));
   body.innerHTML = rows.map(screenerRowHtml).join('');
+  rows.forEach(s => {
+    if (!s.cryptoSparkline || !s.cryptoSparkline.length) return;
+    const canvas = document.getElementById(`spark-${s.id}`);
+    if (canvas) renderSparkline(canvas, s.cryptoSparkline, s.cryptoDirection);
+  });
 }
 
 function openScreenerDetail(id) {

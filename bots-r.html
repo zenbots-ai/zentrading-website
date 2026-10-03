@@ -1660,14 +1660,6 @@ function agentsCleanTitle(title) {
   return text;
 }
 
-function agentsLogPrefix(title) {
-  const match = String(title || '').match(/^([A-Za-z][A-Za-z0-9]*(?:\s+[A-Za-z][A-Za-z0-9]*){0,2}):\s+([\s\S]*)$/);
-  if (!match) return { label: '', title: String(title || '') };
-  const label = match[1].trim();
-  if (!label || label.length > 28) return { label: '', title: String(title || '') };
-  return { label, title: match[2] };
-}
-
 function agentsSplitCard(text) {
   let raw = String(text || '').replace(/\r\n/g, '\n').trim();
   if (!raw) return { meta: '', title: '', body: '' };
@@ -1726,7 +1718,7 @@ function agentsMetricHtml(metric) {
   return text ? `<span class="agents-card-metric">${esc(text)}</span>` : '';
 }
 
-function agentsCardHtml(title, body, person, nameRole, whenRaw, badge, metric) {
+function agentsCardHtml(title, body, person, nameRole, whenRaw, badge, metric, showBody) {
   const id = agentsCardStore.length;
   agentsCardStore.push({
     title,
@@ -1735,7 +1727,10 @@ function agentsCardHtml(title, body, person, nameRole, whenRaw, badge, metric) {
   const badgeHtml = badge
     ? `<div class="agents-task-top"><span class="bt-status-badge ${badge.cls}">${esc(badge.label)}</span></div>`
     : '';
-  return `<div class="gcard" data-agents-card="${id}" role="button" tabindex="0">${agentsCornerHtml(person, nameRole)}${agentsTimeHtml(whenRaw)}${agentsMetricHtml(metric)}${badgeHtml}<div class="agents-task-title">${esc(title)}</div></div>`;
+  const bodyHtml = showBody && body
+    ? `<div class="agents-task-text">${String(body).split('\n').map(line => line.trim()).filter(Boolean).map(line => `<p>${esc(line)}</p>`).join('')}</div>`
+    : '';
+  return `<div class="gcard" data-agents-card="${id}" role="button" tabindex="0">${agentsCornerHtml(person, nameRole)}${agentsTimeHtml(whenRaw)}${agentsMetricHtml(metric)}${badgeHtml}<div class="agents-task-title">${esc(title)}</div>${bodyHtml}</div>`;
 }
 
 function agentsCardsHtml(items, badgeFor) {
@@ -1746,37 +1741,58 @@ function agentsCardsHtml(items, badgeFor) {
   }).join('');
 }
 
-function agentsLogHtml(entries) {
-  if (!entries.length) return agentsEmptyHtml();
-  let carriedPerson = null;
-  const cards = [];
+function agentsGroupLogEntries(entries) {
+  const grouped = [];
+  let current = null;
+  function pushCurrent() {
+    if (current && current.lines.length) grouped.push(current);
+    current = null;
+  }
   entries.forEach(entry => {
-    const trimmed = String(entry.text || '').trim();
-    if (!trimmed) return;
-    const dated = trimmed.match(/(\d{4}-\d{2}-\d{2}(?:[T ]\d{2}:\d{2})?)/);
-    const heading = /^#+\s/.test(trimmed);
-    if (dated && (heading || /\bceo\b/i.test(trimmed))) {
-      carriedPerson = agentsDetectAgent(trimmed) || carriedPerson;
+    const text = String(entry.text || '').trim();
+    if (!text || /^#\s+Team Log\s*$/i.test(text)) return;
+    const sheetTitle = String(entry.title || '').trim();
+    const alreadyGrouped = /^\d{4}-\d{2}-\d{2}$/.test(sheetTitle) && !/^##\s/.test(text);
+    if (alreadyGrouped) {
+      pushCurrent();
+      grouped.push({
+        title: sheetTitle,
+        lines: text.split('\n').map(line => line.replace(/^\s*-\s*/, '').trim()).filter(Boolean),
+        timestamp: entry.timestamp || '',
+        metric: entry.metric || '',
+        seq: grouped.length,
+      });
+      return;
     }
-    let title = agentsCleanTitle(trimmed
-      .replace(/^#+\s*/, '')
-      .replace(/^\d{4}-\d{2}-\d{2}\s*[—–-]\s*/, '')
-      .replace(/^-\s*/, ''));
-    if (!title) return;
-    const prefixed = agentsLogPrefix(title);
-    const labeled = agentsCleanTitle(prefixed.title);
-    const label = prefixed.label && labeled ? prefixed.label : '';
-    if (label) title = labeled;
-    title = agentsCleanTitle(title);
-    const person = agentsDetectAgent(trimmed) || carriedPerson;
-    cards.push({ title, label, person, when: entry.timestamp || '', metric: entry.metric || '', seq: cards.length });
+    const heading = text.match(/^##\s+(\d{4}-\d{2}-\d{2})\b/);
+    if (heading && !text.includes('\n')) {
+      pushCurrent();
+      current = { title: heading[1], lines: [], timestamp: entry.timestamp || '', metric: entry.metric || '', seq: 0 };
+      return;
+    }
+    if (!current) return;
+    const line = text.replace(/^\s*-\s*/, '').trim();
+    if (line) current.lines.push(line);
+    if (!current.timestamp && entry.timestamp) current.timestamp = entry.timestamp;
   });
+  pushCurrent();
+  grouped.forEach((card, index) => { card.seq = index; });
+  return grouped;
+}
+
+function agentsLogStampTitle(card) {
+  const raw = String(card.timestamp || '').trim();
+  const match = raw.match(/(\d{4}-\d{2}-\d{2})[T ](\d{2}:\d{2})/);
+  if (match) return `${match[1]} ${match[2]}`;
+  return String(card.title || '').trim();
+}
+
+function agentsLogHtml(entries) {
+  const person = AGENTS_PEOPLE[0];
+  const cards = agentsGroupLogEntries(entries);
   if (!cards.length) return agentsEmptyHtml();
-  return cards.sort((a, b) => (agentsCardTime(b.when) - agentsCardTime(a.when)) || (b.seq - a.seq)).map(card => {
-    const title = agentsCleanTitle(card.title);
-    const nameRole = card.person ? card.person.role : '';
-    const badge = card.label ? { label: card.label, cls: 'pending' } : null;
-    return agentsCardHtml(title, '', card.person, nameRole, card.when, badge, card.metric);
+  return cards.sort((a, b) => (agentsCardTime(b.timestamp) - agentsCardTime(a.timestamp)) || (b.seq - a.seq)).map(card => {
+    return agentsCardHtml(agentsLogStampTitle(card), card.lines.join('\n'), person, person.role, card.timestamp, null, card.metric, true);
   }).join('');
 }
 
@@ -1867,7 +1883,7 @@ async function refreshAgents() {
       const title = String(r[3] || '');
       const metric = String(r[4] || '');
       if (section === 'status') status = content.trim();
-      else if (section === 'log') grouped.log.push({ text: content, timestamp, metric });
+      else if (section === 'log') grouped.log.push({ text: content, title, timestamp, metric });
       else if (grouped[section]) grouped[section].push({ text: content, title, timestamp, metric });
     });
     agentsCardStore = [];

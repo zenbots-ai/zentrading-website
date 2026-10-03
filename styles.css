@@ -3072,6 +3072,9 @@ body:has(.nav) {
   line-height: 1.7;
   white-space: pre-wrap;
 }
+#tab-agents .agents-task-text p + p {
+  margin-top: 10px;
+}
 #tab-agents .agents-item {
   font-size: 13px;
   color: #FFFFF2;

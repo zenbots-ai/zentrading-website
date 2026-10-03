@@ -1734,10 +1734,9 @@ body:has(.nav) {
   display: none;
 }
 .popover-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
+  display: block;
   margin-bottom: 14px;
+  padding-right: 28px;
 }
 .popover-title {
   font-size: 16px;
@@ -1745,13 +1744,16 @@ body:has(.nav) {
   color: #FFFFF2;
 }
 .popover-close {
+  position: absolute;
+  top: 14px;
+  right: 14px;
   background: none;
   border: none;
   color: #999999;
   font-size: 20px;
   cursor: pointer;
   line-height: 1;
-  padding: 0 4px;
+  padding: 0;
 }
 .popover-close:hover {
   color: #FFFFF2;
@@ -1863,6 +1865,22 @@ body:has(.nav) {
 #scHeader .bt-info-popover {
   width: 280px;
 }
+#agentsHeader .bt-info-popover {
+  width: 280px;
+}
+#agentsHeader .agents-info-copy + .agents-info-copy,
+#agentsHeader .agents-info-copy + .agents-info-row {
+  margin-top: 10px;
+}
+#agentsHeader .agents-info-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-top: 6px;
+}
+#agentsHeader .agents-info-row .agents-avatar {
+  margin-top: 5px;
+}
 #btSortBtn,
 #scSortBtn {
   white-space: nowrap;
@@ -1878,7 +1896,8 @@ body:has(.nav) {
 #btRefreshBtn,
 #btExportBtn,
 #scInfoBtn,
-#scRefreshBtn {
+#scRefreshBtn,
+#agentsInfoBtn {
   padding-top: 6px;
   padding-bottom: 6px;
 }
@@ -1886,7 +1905,8 @@ body:has(.nav) {
 #btRefreshBtn i,
 #btExportBtn i,
 #scInfoBtn i,
-#scRefreshBtn i {
+#scRefreshBtn i,
+#agentsInfoBtn i {
   font-size: 18px;
   line-height: 1;
   display: inline-flex;
@@ -2098,7 +2118,7 @@ body:has(.nav) {
   background: rgba(9,251,157,0.15);
   color: #09FB9D;
 }
-.bt-status-badge.done {
+.bt-status-badge.in-progress {
   background: rgba(156,240,250,0.15);
   color: #9CF0FA;
 }
@@ -2751,7 +2771,8 @@ body:has(.nav) {
   padding: 2px 7px;
   border-radius: 4px;
 }
-#tab-paper .paper-footnote {
+#tab-paper .paper-footnote,
+#tab-agents .paper-footnote {
   margin-top: 10px;
   font-size: 11px;
   font-weight: 500;
@@ -2907,4 +2928,172 @@ body:has(.nav) {
 }
 #popover .sc-pop-body li + li {
   margin-top: 4px;
+}
+#popover .sc-pop-body.agents-pop-body {
+  line-height: 1.7;
+}
+#popover .sc-pop-body.agents-pop-body p + p {
+  margin-top: 10px;
+}
+
+/* ═══════════════════════════════════════════
+   AGENTS TAB
+═══════════════════════════════════════════ */
+#tab-agents .agents-dash {
+  padding: 0 20px 28px;
+}
+#tab-agents .agents-board {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+  margin-top: 12px;
+}
+#tab-agents .agents-col-done {
+  display: none;
+}
+#tab-agents .top-row {
+  grid-template-columns: repeat(2, 1fr);
+}
+#tab-agents .agents-col {
+  min-width: 0;
+}
+#tab-agents .agents-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+#tab-agents .agents-heading {
+  font-size: 13px;
+  color: #999999;
+  font-weight: 500;
+  margin-bottom: 8px;
+}
+#tab-agents .agents-list .gcard {
+  position: relative;
+  padding: 15px 16px 36px;
+  cursor: pointer;
+}
+#tab-agents #agentsBacklog .gcard:has(.bt-status-badge.in-progress) {
+  border: 1px solid #9CF0FA;
+}
+#tab-agents .agents-card-corner {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  max-width: calc(100% - 28px);
+}
+#tab-agents .agents-card-name {
+  font-size: 11px;
+  font-weight: 500;
+  color: #999999;
+  line-height: 1.5;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+#tab-agents .agents-avatar,
+#agentsHeader .agents-avatar {
+  width: 20px;
+  height: 20px;
+  border-radius: 100px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 28px;
+  font-size: 14px;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -0.03em;
+}
+#tab-agents .agents-card-date {
+  position: absolute;
+  right: 14px;
+  bottom: 10px;
+  font-size: 11px;
+  font-weight: 500;
+  color: #999999;
+  line-height: 1.5;
+  white-space: nowrap;
+}
+#tab-agents .agents-card-metric {
+  position: absolute;
+  left: 14px;
+  bottom: 10px;
+  max-width: calc(100% - 120px);
+  font-size: 11px;
+  font-weight: 500;
+  color: #999999;
+  line-height: 1.5;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+#tab-agents .agents-status-card {
+  position: relative;
+}
+#tab-agents .agents-refresh-note {
+  position: absolute;
+  top: 13px;
+  right: 15px;
+  margin: 0;
+  max-width: none;
+}
+#tab-agents .agents-task-top {
+  display: flex;
+  align-items: center;
+  min-height: 16px;
+  margin-bottom: 10px;
+}
+#tab-agents .agents-task-meta {
+  margin-top: 0;
+  margin-bottom: 6px;
+  max-width: none;
+  font-size: 11px;
+  font-weight: 500;
+  color: #999999;
+  line-height: 1.5;
+}
+#tab-agents .agents-task-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: #FFFFF2;
+  line-height: 1.45;
+}
+#tab-agents .agents-task-text {
+  margin-top: 10px;
+  font-size: 13px;
+  color: #999999;
+  font-weight: 500;
+  line-height: 1.7;
+  white-space: pre-wrap;
+}
+#tab-agents .agents-item {
+  font-size: 13px;
+  color: #FFFFF2;
+  font-weight: 500;
+  line-height: 1.55;
+  padding: 8px 0;
+  border-bottom: 0.5px solid #282A33;
+  white-space: pre-wrap;
+}
+#tab-agents .agents-item:last-child {
+  border-bottom: 0;
+}
+#tab-agents .agents-empty {
+  color: #999999;
+  font-size: 13px;
+  padding: 8px 0;
+}
+#tab-agents .gcard .value {
+  font-size: 18px;
+}
+@media (max-width: 700px) {
+  #tab-agents .agents-board {
+    grid-template-columns: 1fr;
+  }
 }

@@ -35,12 +35,17 @@
 <div class="tab-nav">
   <a href="/" class="logo">Zen.</a>
   <div class="tab-nav-tabs">
-    <button class="tab-btn active" onclick="switchTab('screener',this)">Screener</button>
+    <button class="tab-btn active" onclick="switchTab('agents',this)">Agents</button>
+    <button class="tab-btn" onclick="switchTab('screener',this)">Screener</button>
     <button class="tab-btn" onclick="switchTab('backtest',this)">Backtests</button>
     <button class="tab-btn" onclick="switchTab('paper',this)">Paper Trades</button>
     <button class="tab-btn" onclick="switchTab('live',this)">Live Trades</button>
   </div>
-  <div class="bt-header" id="scHeader">
+  <div class="bt-header" id="agentsHeader">
+    <button class="tbtn" id="agentsInfoBtn"><i class="ri-information-line"></i></button>
+    <div class="bt-info-popover" id="agentsInfoPopover"><div class="agents-info-copy">One pass through 01 to 06, shown as Runs today out of 40, every 30 mins, resets at midnight, stops at 40 a day, skipped if a STOP file is present</div><div class="agents-info-copy">02 or a Telegram IDEA adds to Backlog, 01 assigns it to 02-06 as In Progress, the assigned agent does the work, finished moves to Done, only 01 writes the Log</div><div class="agents-info-row"><span class="agents-avatar" style="background:#9CF0FA;color:#12141A">01</span><span>Team Lead: decides next step, assigns tasks, writes the Log</span></div><div class="agents-info-row"><span class="agents-avatar" style="background:#F2B5D4;color:#12141A">02</span><span>Strategy Agent: proposes ideas, adds to Backlog</span></div><div class="agents-info-row"><span class="agents-avatar" style="background:#E9D48A;color:#12141A">03</span><span>Screener Agent: fast scan on local data, moves task to Done</span></div><div class="agents-info-row"><span class="agents-avatar" style="background:#C4B5FD;color:#12141A">04</span><span>Backtest Agent: builds and runs the LEAN backtest</span></div><div class="agents-info-row"><span class="agents-avatar" style="background:#C5D0DE;color:#12141A">05</span><span>QA Analyst: rechecks results, tags Pass or Reject</span></div><div class="agents-info-row"><span class="agents-avatar" style="background:#93C5FD;color:#12141A">06</span><span>Risk Manager: checks QA Pass against the risk bar, can't approve live trades</span></div></div>
+  </div>
+  <div class="bt-header" id="scHeader" style="display:none">
     <button class="tbtn" id="scSortBtn" onclick="toggleScreenerSort()" title="Sorting by Crypto"><i class="ri-sort-asc"></i><span id="scSortLabel">Crypto</span></button>
     <button class="tbtn" id="scInfoBtn"><i class="ri-information-line"></i></button>
     <button class="bt-add-btn" id="scRefreshBtn" onclick="refreshScreener()"><i class="ri-refresh-line"></i></button>
@@ -65,7 +70,7 @@
   </div>
 </div>
 
-<div class="tab-panel active" id="tab-screener">
+<div class="tab-panel" id="tab-screener">
   <div class="sc-wrap">
     <div class="bt-table-wrap bt-table-scroll sc-table-scroll" id="scTableScroll">
     <table class="bt-table sc-table">
@@ -162,6 +167,26 @@
 </div>
 </div>
 
+<div class="tab-panel active" id="tab-agents">
+  <div class="agents-dash">
+    <div class="top-row" id="agentsStatus"></div>
+    <div class="agents-board">
+      <section class="agents-col">
+        <h2 class="agents-heading">Log</h2>
+        <div class="agents-list" id="agentsLog"></div>
+      </section>
+      <section class="agents-col">
+        <h2 class="agents-heading">Trade Ideas</h2>
+        <div class="agents-list" id="agentsBacklog"></div>
+      </section>
+      <section class="agents-col agents-col-done">
+        <h2 class="agents-heading">Done</h2>
+        <div class="agents-list" id="agentsDone"></div>
+      </section>
+    </div>
+  </div>
+</div>
+
 <div class="popover-overlay" id="popoverOverlay" onclick="closePopover(event)">
   <div class="popover" id="popover">
     <div class="popover-header">
@@ -197,6 +222,8 @@ function switchTab(tab, el) {
   if (header) header.style.display = tab === 'backtest' ? '' : 'none';
   const scHeader = document.getElementById('scHeader');
   if (scHeader) scHeader.style.display = tab === 'screener' ? '' : 'none';
+  const agentsHeader = document.getElementById('agentsHeader');
+  if (agentsHeader) agentsHeader.style.display = tab === 'agents' ? '' : 'none';
 }
 
 function statusClass(status) {
@@ -737,6 +764,20 @@ document.addEventListener('click', (e) => {
   if (!pop.contains(e.target) && !btn.contains(e.target)) pop.classList.remove('visible');
 });
 document.getElementById('btInfoBtn')?.addEventListener('click', toggleBtInfo);
+
+function toggleAgentsInfo(e) {
+  e.stopPropagation();
+  const pop = document.getElementById('agentsInfoPopover');
+  if (pop) pop.classList.toggle('visible');
+}
+
+document.addEventListener('click', (e) => {
+  const pop = document.getElementById('agentsInfoPopover');
+  const btn = document.getElementById('agentsInfoBtn');
+  if (!pop || !btn) return;
+  if (!pop.contains(e.target) && !btn.contains(e.target)) pop.classList.remove('visible');
+});
+document.getElementById('agentsInfoBtn')?.addEventListener('click', toggleAgentsInfo);
 
 /* ═══════════════════════════════════════════
    Paper Trades tab mockup — placeholder data only.
@@ -1470,6 +1511,386 @@ async function refreshScreener() {
   if (scroll) scroll.classList.remove('is-loading');
 }
 
+function agentsEmptyHtml() {
+  return '<div class="agents-empty">No data yet</div>';
+}
+
+function agentsItemsHtml(items) {
+  if (!items.length) return agentsEmptyHtml();
+  return items.map(text => `<div class="agents-item">${esc(text)}</div>`).join('');
+}
+
+function agentsIsRejected(text) {
+  const t = String(text || '').toLowerCase();
+  return t.includes('reject') || t.includes('no edge') || t.includes('retired');
+}
+
+function agentsIsPass(text) {
+  const t = String(text || '').toLowerCase();
+  if (agentsIsRejected(text)) return false;
+  return t.includes('pass') || t.includes('validated') || t.includes('approved');
+}
+
+function agentsPassBadge(text) {
+  const t = String(text || '').toLowerCase();
+  const backtest = /\blean\b/.test(t) || t.includes('backtest') || /\bqa\b/.test(t);
+  return {
+    label: backtest ? 'Passed Backtest' : 'Passed Screener',
+    cls: 'pass',
+  };
+}
+
+function agentsDoneBadge(text) {
+  const t = String(text || '').toLowerCase();
+  if (t.includes('retired')) return { label: 'Retired', cls: 'fail' };
+  if (t.includes('reject') || t.includes('no edge')) return { label: 'Rejected', cls: 'fail' };
+  return { label: 'Pending', cls: 'pending' };
+}
+
+const AGENTS_PEOPLE = [
+  { name: '01', role: 'Team Lead', initial: '01', color: '#9CF0FA', keys: ['ceo agent', '[ceo]', 'team lead'] },
+  { name: '02', role: 'Strategist', initial: '02', color: '#F2B5D4', keys: ['strategy agent', '[strategy]', 'strategist'] },
+  { name: '03', role: 'Screener', initial: '03', color: '#E9D48A', keys: ['screener agent', '[screener]', 'screener'] },
+  { name: '04', role: 'Backtester', initial: '04', color: '#C4B5FD', keys: ['backtest agent', '[backtest]', 'backtester'] },
+  { name: '05', role: 'QA Analyst', initial: '05', color: '#C5D0DE', keys: ['qa agent', '[qa]', 'qa analyst'] },
+  { name: '06', role: 'Risk Manager', initial: '06', color: '#93C5FD', keys: ['risk agent', '[risk]', 'risk manager'] },
+];
+
+function agentsMatchPerson(text) {
+  const t = String(text || '').toLowerCase();
+  let best = null;
+  let bestAt = Infinity;
+  AGENTS_PEOPLE.forEach(person => {
+    person.keys.forEach(key => {
+      const at = t.indexOf(key);
+      if (at >= 0 && at < bestAt) {
+        best = person;
+        bestAt = at;
+      }
+    });
+  });
+  return best;
+}
+
+function agentsDetectAgent(text) {
+  const raw = String(text || '');
+  const lines = raw.split('\n').map(line => line.trim().replace(/^-\s*/, ''));
+  const assigned = lines.find(line => /^assigned:/i.test(line));
+  if (assigned) {
+    const hit = agentsMatchPerson(assigned);
+    if (hit) return hit;
+  }
+  const proposed = lines.find(line => /^proposed:/i.test(line));
+  if (proposed) {
+    const hit = agentsMatchPerson(proposed);
+    if (hit) return hit;
+  }
+  const first = lines.find(Boolean) || '';
+  const bracket = first.match(/^\[([^\]]+)\]/);
+  if (bracket) {
+    const hit = agentsMatchPerson('[' + bracket[1] + ']');
+    if (hit) return hit;
+  }
+  const inline = raw.match(/assigned\s+[a-z]+\s+agent/i);
+  if (inline) {
+    const hit = agentsMatchPerson(inline[0]);
+    if (hit) return hit;
+  }
+  if (/\bceo\b/i.test(raw) && !agentsMatchPerson(raw)) return AGENTS_PEOPLE[0];
+  return agentsMatchPerson(raw);
+}
+
+function agentsParseTimestamp(raw) {
+  const text = String(raw || '');
+  const full = text.match(/(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})/);
+  if (full) {
+    return new Date(Number(full[1]), Number(full[2]) - 1, Number(full[3]), Number(full[4]), Number(full[5])).getTime();
+  }
+  const day = text.match(/(\d{4})-(\d{2})-(\d{2})/);
+  if (!day) return null;
+  return new Date(Number(day[1]), Number(day[2]) - 1, Number(day[3])).getTime();
+}
+
+function agentsCardTime(raw) {
+  const then = agentsParseTimestamp(raw);
+  return then == null || Number.isNaN(then) ? 0 : then;
+}
+
+function agentsSortByTime(items, whenOf) {
+  return items.slice().sort((a, b) => agentsCardTime(whenOf(b)) - agentsCardTime(whenOf(a)));
+}
+
+function agentsSortToDo(items) {
+  return items.slice().sort((a, b) => {
+    const aProgress = a.section === 'in progress' ? 0 : 1;
+    const bProgress = b.section === 'in progress' ? 0 : 1;
+    if (aProgress !== bProgress) return aProgress - bProgress;
+    return agentsCardTime(a.timestamp) - agentsCardTime(b.timestamp);
+  });
+}
+
+function agentsRelativeTime(raw, now) {
+  const then = agentsParseTimestamp(raw);
+  if (then == null || Number.isNaN(then)) return '';
+  const current = now == null ? Date.now() : now;
+  let seconds = Math.floor((current - then) / 1000);
+  if (seconds < 0) seconds = 0;
+  if (seconds < 60) return seconds === 1 ? '1 sec ago' : `${seconds} secs ago`;
+  const mins = Math.floor(seconds / 60);
+  if (mins < 60) return mins === 1 ? '1 min ago' : `${mins} mins ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return hrs === 1 ? '1 hr ago' : `${hrs} hrs ago`;
+  const days = Math.floor(hrs / 24);
+  if (days < 7) return days === 1 ? '1 day ago' : `${days} days ago`;
+  const weeks = Math.floor(days / 7);
+  return weeks === 1 ? '1 week ago' : `${weeks} weeks ago`;
+}
+
+function agentsSectionBadge(section) {
+  if (section === 'in progress') return { label: 'In Progress', cls: 'in-progress' };
+  return { label: 'Backlog', cls: 'pending' };
+}
+
+function agentsCleanTitle(title) {
+  let text = String(title || '')
+    .replace(/[—–-]/g, ' ')
+    .replace(/ {2,}/g, ' ')
+    .trim();
+  while (text.endsWith('.')) text = text.slice(0, -1).trim();
+  return text;
+}
+
+function agentsLogPrefix(title) {
+  const match = String(title || '').match(/^([A-Za-z][A-Za-z0-9]*(?:\s+[A-Za-z][A-Za-z0-9]*){0,2}):\s+([\s\S]*)$/);
+  if (!match) return { label: '', title: String(title || '') };
+  const label = match[1].trim();
+  if (!label || label.length > 28) return { label: '', title: String(title || '') };
+  return { label, title: match[2] };
+}
+
+function agentsSplitCard(text) {
+  let raw = String(text || '').replace(/\r\n/g, '\n').trim();
+  if (!raw) return { meta: '', title: '', body: '' };
+  if (!raw.includes('\n')) {
+    raw = raw.replace(/\s+-\s+(?=Assigned:|Opened:|Done:|Proposed:|Submitted:)/gi, '\n');
+  }
+  const lines = raw.split('\n').map(line => line.trim()).filter(Boolean);
+  let agent = '';
+  let when = '';
+  const rest = [];
+  lines.forEach(line => {
+    const cleaned = line.replace(/^-\s*/, '');
+    const assigned = cleaned.match(/^Assigned:\s*(.+)$/i);
+    const proposed = cleaned.match(/^Proposed:\s*(.+)$/i);
+    const opened = cleaned.match(/^Opened:\s*(.+)$/i);
+    const done = cleaned.match(/^Done:\s*(.+)$/i);
+    const submitted = cleaned.match(/^Submitted:\s*(.+)$/i);
+    if (assigned) agent = assigned[1].trim();
+    else if (proposed && !agent) agent = proposed[1].trim();
+    else if (opened) when = when || opened[1].trim();
+    else if (done) when = when || done[1].trim();
+    else if (submitted) when = when || submitted[1].trim();
+    else rest.push(cleaned);
+  });
+  const person = agentsDetectAgent(raw);
+  const meta = person ? person.role : '';
+  return {
+    meta,
+    body: rest.join('\n'),
+    when: when || raw,
+    person,
+  };
+}
+
+let agentsCardStore = [];
+
+function agentsAvatarHtml(person) {
+  if (!person) return '';
+  return `<span class="agents-avatar" style="background:${person.color};color:#12141A">${esc(person.initial)}</span>`;
+}
+
+function agentsCornerHtml(person, nameRole) {
+  const avatar = agentsAvatarHtml(person);
+  const name = nameRole ? `<span class="agents-card-name">${esc(nameRole)}</span>` : '';
+  if (!avatar && !name) return '';
+  return `<div class="agents-card-corner">${name}${avatar}</div>`;
+}
+
+function agentsTimeHtml(whenRaw) {
+  const time = agentsRelativeTime(whenRaw);
+  return time ? `<span class="agents-card-date">${esc(time)}</span>` : '';
+}
+
+function agentsMetricHtml(metric) {
+  const text = String(metric || '').trim();
+  return text ? `<span class="agents-card-metric">${esc(text)}</span>` : '';
+}
+
+function agentsCardHtml(title, body, person, nameRole, whenRaw, badge, metric) {
+  const id = agentsCardStore.length;
+  agentsCardStore.push({
+    title,
+    body: body || 'No further detail.',
+  });
+  const badgeHtml = badge
+    ? `<div class="agents-task-top"><span class="bt-status-badge ${badge.cls}">${esc(badge.label)}</span></div>`
+    : '';
+  return `<div class="gcard" data-agents-card="${id}" role="button" tabindex="0">${agentsCornerHtml(person, nameRole)}${agentsTimeHtml(whenRaw)}${agentsMetricHtml(metric)}${badgeHtml}<div class="agents-task-title">${esc(title)}</div></div>`;
+}
+
+function agentsCardsHtml(items, badgeFor) {
+  if (!items.length) return agentsEmptyHtml();
+  return items.map((item, index) => {
+    const parts = agentsSplitCard(item.text);
+    return agentsCardHtml(item.title, parts.body, parts.person, parts.meta, item.timestamp, badgeFor(item, index), item.metric);
+  }).join('');
+}
+
+function agentsLogHtml(entries) {
+  if (!entries.length) return agentsEmptyHtml();
+  let carriedPerson = null;
+  const cards = [];
+  entries.forEach(entry => {
+    const trimmed = String(entry.text || '').trim();
+    if (!trimmed) return;
+    const dated = trimmed.match(/(\d{4}-\d{2}-\d{2}(?:[T ]\d{2}:\d{2})?)/);
+    const heading = /^#+\s/.test(trimmed);
+    if (dated && (heading || /\bceo\b/i.test(trimmed))) {
+      carriedPerson = agentsDetectAgent(trimmed) || carriedPerson;
+    }
+    let title = agentsCleanTitle(trimmed
+      .replace(/^#+\s*/, '')
+      .replace(/^\d{4}-\d{2}-\d{2}\s*[—–-]\s*/, '')
+      .replace(/^-\s*/, ''));
+    if (!title) return;
+    const prefixed = agentsLogPrefix(title);
+    const labeled = agentsCleanTitle(prefixed.title);
+    const label = prefixed.label && labeled ? prefixed.label : '';
+    if (label) title = labeled;
+    title = agentsCleanTitle(title);
+    const person = agentsDetectAgent(trimmed) || carriedPerson;
+    cards.push({ title, label, person, when: entry.timestamp || '', metric: entry.metric || '', seq: cards.length });
+  });
+  if (!cards.length) return agentsEmptyHtml();
+  return cards.sort((a, b) => (agentsCardTime(b.when) - agentsCardTime(a.when)) || (b.seq - a.seq)).map(card => {
+    const title = agentsCleanTitle(card.title);
+    const nameRole = card.person ? card.person.role : '';
+    const badge = card.label ? { label: card.label, cls: 'pending' } : null;
+    return agentsCardHtml(title, '', card.person, nameRole, card.when, badge, card.metric);
+  }).join('');
+}
+
+function agentsDetailHtml(text) {
+  const raw = String(text || '').replace(/\r\n/g, '\n').trim();
+  const paragraphs = raw.split(/\n+/).map(line => line.trim()).filter(Boolean);
+  const lines = paragraphs.length ? paragraphs : ['No further detail.'];
+  return `<div class="sc-pop-body agents-pop-body">${lines.map(line => `<p>${esc(line)}</p>`).join('')}</div>`;
+}
+
+function openAgentsDetail(id) {
+  const card = agentsCardStore[Number(id)];
+  if (!card) return;
+  document.getElementById('popoverTitle').textContent = card.title;
+  document.getElementById('popoverBody').innerHTML = agentsDetailHtml(card.body);
+  document.getElementById('scInfoPopover')?.classList.remove('visible');
+  document.getElementById('btInfoPopover')?.classList.remove('visible');
+  document.getElementById('agentsInfoPopover')?.classList.remove('visible');
+  document.getElementById('popoverOverlay').classList.add('visible');
+}
+
+function initAgentsCards() {
+  const root = document.getElementById('tab-agents');
+  if (!root || root.dataset.bound) return;
+  root.dataset.bound = '1';
+  root.addEventListener('click', (e) => {
+    const card = e.target.closest('[data-agents-card]');
+    if (!card) return;
+    openAgentsDetail(card.getAttribute('data-agents-card'));
+  });
+  root.addEventListener('keydown', (e) => {
+    if (e.key !== 'Enter' && e.key !== ' ') return;
+    const card = e.target.closest('[data-agents-card]');
+    if (!card) return;
+    e.preventDefault();
+    openAgentsDetail(card.getAttribute('data-agents-card'));
+  });
+}
+
+function renderAgentsStatus(content) {
+  const el = document.getElementById('agentsStatus');
+  if (!el) return;
+  const text = String(content || '').trim();
+  const parts = text.split('|').map(part => part.trim()).filter(Boolean).filter(part => {
+    const idx = part.indexOf(':');
+    const label = (idx >= 0 ? part.slice(0, idx) : part).trim().toLowerCase();
+    return label === 'model' || label.startsWith('runs today');
+  });
+  if (!parts.length) {
+    el.innerHTML = '<div class="gcard"><div class="label">Status</div><div class="value">No data yet</div></div>';
+    return;
+  }
+  el.innerHTML = parts.map(part => {
+    const idx = part.indexOf(':');
+    const label = idx >= 0 ? part.slice(0, idx).trim() : 'Status';
+    const value = idx >= 0 ? part.slice(idx + 1).trim() : part;
+    const note = label.toLowerCase().startsWith('runs today')
+      ? '<span class="paper-footnote agents-refresh-note">Updates every 1 min, Runs start every 30 mins</span>'
+      : '';
+    return `<div class="gcard${note ? ' agents-status-card' : ''}">${note}<div class="label">${esc(label)}</div><div class="value">${esc(value || '—')}</div></div>`;
+  }).join('');
+}
+
+function renderAgentsEmpty() {
+  renderAgentsStatus('');
+  const ids = ['agentsBacklog', 'agentsDone', 'agentsLog'];
+  ids.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.innerHTML = agentsEmptyHtml();
+  });
+}
+
+async function refreshAgents() {
+  try {
+    const values = await fetchSheetData('Agents-Rich');
+    const rows = (values || []).filter(r => r && r.some(c => String(c).trim()));
+    const body = rows.filter(r => String(r[0] || '').trim().toLowerCase() !== 'section');
+    if (!body.length) {
+      renderAgentsEmpty();
+      return;
+    }
+    const grouped = { backlog: [], 'in progress': [], done: [], log: [] };
+    let status = '';
+    body.forEach(r => {
+      const section = String(r[0] || '').trim().toLowerCase();
+      const timestamp = String(r[1] || '');
+      const content = String(r[2] || '');
+      const title = String(r[3] || '');
+      const metric = String(r[4] || '');
+      if (section === 'status') status = content.trim();
+      else if (section === 'log') grouped.log.push({ text: content, timestamp, metric });
+      else if (grouped[section]) grouped[section].push({ text: content, title, timestamp, metric });
+    });
+    agentsCardStore = [];
+    const backlogItems = agentsSortToDo(
+      grouped['in progress'].map(item => ({ ...item, section: 'in progress' }))
+        .concat(grouped.backlog.map(item => ({ ...item, section: 'backlog' })))
+    );
+    const doneItems = agentsSortByTime(grouped.done, item => item.timestamp);
+    renderAgentsStatus(status);
+    document.getElementById('agentsBacklog').innerHTML = agentsCardsHtml(
+      backlogItems,
+      (item) => agentsSectionBadge(item.section)
+    );
+    document.getElementById('agentsDone').innerHTML = agentsCardsHtml(
+      doneItems,
+      (item) => agentsIsPass(item.text) ? agentsPassBadge(item.text) : agentsDoneBadge(item.text)
+    );
+    document.getElementById('agentsLog').innerHTML = agentsLogHtml(grouped.log);
+  } catch (e) {
+    renderAgentsEmpty();
+  }
+}
+
 function toggleScInfo(e) {
   e.stopPropagation();
   const pop = document.getElementById('scInfoPopover');
@@ -1501,6 +1922,9 @@ syncSortButton();
 refreshBacktest(true);
 initPaperMock();
 initScreenerMock();
+refreshAgents();
+setInterval(refreshAgents, 60000);
+initAgentsCards();
 </script>
 </body>
 </html>

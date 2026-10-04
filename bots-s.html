@@ -44,7 +44,7 @@
     <button class="tbtn" id="scSortBtn" onclick="toggleScreenerSort()" title="Sorting by Crypto"><i class="ri-sort-asc"></i><span id="scSortLabel">Crypto</span></button>
     <button class="tbtn" id="scInfoBtn"><i class="ri-information-line"></i></button>
     <button class="bt-add-btn" id="scRefreshBtn" onclick="refreshScreener()"><i class="ri-refresh-line"></i></button>
-    <div class="bt-info-popover" id="scInfoPopover">Fast pre-screen of trading ideas using a Profit Factor threshold before promoting to a full LEAN backtest. These are not final validated results, see the Backtesting tab for that.<br><br><span class="sc-key tbc">TBC</span>: relevant, not yet tested<br><span class="sc-key pass">Pass</span>: ≥ 1.2 PF, ready for backtest<br><span class="sc-key parked">Parked</span>: promising, unresolved<br><span class="sc-key retired">Retired</span>: no edge<br><span class="sc-key anti-edge">Anti-edge</span>: worse than random</div>
+    <div class="bt-info-popover" id="scInfoPopover"><p>Fast pre-screen of trading ideas using a Profit Factor threshold before promoting to a full LEAN backtest. These are not final validated results, see the Backtesting tab for that.</p><ul><li><span class="sc-key tbc">TBC</span>: relevant, not yet tested</li><li><span class="sc-key pass">Pass</span>: ≥ 1.2 PF, ready for backtest</li><li><span class="sc-key parked">Parked</span>: promising, unresolved</li><li><span class="sc-key retired">Retired</span>: no edge</li><li><span class="sc-key anti-edge">Anti-edge</span>: worse than random</li></ul></div>
   </div>
   <div class="bt-header" id="btHeader" style="display:none">
     <select id="btMarketFilter" onchange="onMarketFilterChange()">
@@ -61,7 +61,7 @@
     <button class="tbtn" id="btExportBtn" onclick="exportBacktestCsv()" title="Export CSV"><i class="ri-download-2-line"></i></button>
     <button class="tbtn" id="btInfoBtn"><i class="ri-information-line"></i></button>
     <button class="bt-add-btn" id="btRefreshBtn" onclick="refreshBacktest(true)"><i class="ri-refresh-line"></i></button>
-    <div class="bt-info-popover" id="btInfoPopover">All backtests use a starting capital of £10,000. Results use OANDA data from Jan 2010 (2004 for VIX-based strategies). A result only passes the 8-point validator if it clears: (1) t-stat > 3.0, (2) minimum 100 trades, (3) Sharpe > 1.0 after costs, (4) holdout decay ratio ≥ 0.5 (out-of-sample performance vs in-sample), (5) at least 60% of walk-forward folds profitable, (6) max drawdown < 20%, (7) correlation to other deployed strategies < 0.5, (8) trading costs (swap/financing) subtracted. See the Validator column for each row's overall PASS/FAIL/INCOMPLETE status.</div>
+    <div class="bt-info-popover" id="btInfoPopover"><p>All backtests use a starting capital of £10,000. Results use OANDA data from Jan 2010 (2004 for VIX-based strategies). A result only passes the 8-point validator if it clears:</p><ol><li>t-stat &gt; 3.0</li><li>minimum 100 trades</li><li>Sharpe &gt; 1.0 after costs</li><li>holdout decay ratio ≥ 0.5 (out-of-sample performance vs in-sample)</li><li>at least 60% of walk-forward folds profitable</li><li>max drawdown &lt; 20%</li><li>correlation to other deployed strategies &lt; 0.5</li><li>trading costs (swap/financing) subtracted</li></ol><p>See the Validator column for each row's overall PASS/FAIL/INCOMPLETE status.</p></div>
   </div>
 </div>
 

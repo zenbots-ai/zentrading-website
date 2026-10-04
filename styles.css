@@ -1862,6 +1862,21 @@ body:has(.nav) {
 .bt-info-popover.visible {
   display: block;
 }
+.bt-info-popover p + ul,
+.bt-info-popover p + ol,
+.bt-info-popover ul + p,
+.bt-info-popover ol + p,
+.bt-info-popover p + p {
+  margin-top: 10px;
+}
+.bt-info-popover ul,
+.bt-info-popover ol {
+  margin: 8px 0 0;
+  padding-left: 16px;
+}
+.bt-info-popover li + li {
+  margin-top: 4px;
+}
 #scHeader .bt-info-popover {
   width: 280px;
 }
@@ -3070,6 +3085,22 @@ body:has(.nav) {
   font-weight: 600;
   color: #FFFFF2;
   line-height: 1.45;
+}
+#tab-agents .agents-log-stamp {
+  line-height: 1.45;
+}
+#tab-agents .agents-log-time {
+  font-size: 15px;
+  font-weight: 600;
+  color: #FFFFF2;
+  line-height: 1.45;
+}
+#tab-agents .agents-log-date {
+  margin-top: 2px;
+  font-size: 11px;
+  font-weight: 500;
+  color: #999999;
+  line-height: 1.5;
 }
 #tab-agents .agents-task-text {
   margin-top: 10px;

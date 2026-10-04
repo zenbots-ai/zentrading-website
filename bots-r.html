@@ -49,24 +49,24 @@
     <button class="tbtn" id="scSortBtn" onclick="toggleScreenerSort()" title="Sorting by Crypto"><i class="ri-sort-asc"></i><span id="scSortLabel">Crypto</span></button>
     <button class="tbtn" id="scInfoBtn"><i class="ri-information-line"></i></button>
     <button class="bt-add-btn" id="scRefreshBtn" onclick="refreshScreener()"><i class="ri-refresh-line"></i></button>
-    <div class="bt-info-popover" id="scInfoPopover">Fast pre-screen of trading ideas using a Profit Factor threshold before promoting to a full LEAN backtest. These are not final validated results, see the Backtesting tab for that.<br><br><span class="sc-key tbc">TBC</span>: relevant, not yet tested<br><span class="sc-key pass">Pass</span>: ≥ 1.2 PF, ready for backtest<br><span class="sc-key parked">Parked</span>: promising, unresolved<br><span class="sc-key retired">Retired</span>: no edge<br><span class="sc-key anti-edge">Anti-edge</span>: worse than random</div>
+    <div class="bt-info-popover" id="scInfoPopover"><p>Fast pre-screen of trading ideas using a Profit Factor threshold before promoting to a full LEAN backtest. These are not final validated results, see the Backtesting tab for that.</p><ul><li><span class="sc-key tbc">TBC</span>: relevant, not yet tested</li><li><span class="sc-key pass">Pass</span>: ≥ 1.2 PF, ready for backtest</li><li><span class="sc-key parked">Parked</span>: promising, unresolved</li><li><span class="sc-key retired">Retired</span>: no edge</li><li><span class="sc-key anti-edge">Anti-edge</span>: worse than random</li></ul></div>
   </div>
   <div class="bt-header" id="btHeader" style="display:none">
     <select id="btMarketFilter" onchange="onMarketFilterChange()">
       <option value="All Markets">All Markets</option>
-      <option value="Forex" selected>Forex</option>
+      <option value="Crypto" selected>Crypto</option>
+      <option value="Forex">Forex</option>
       <option value="ETF">ETF</option>
       <option value="Indices">Indices</option>
       <option value="Commodities">Commodities</option>
       <option value="Equity">Equity</option>
-      <option value="Crypto">Crypto</option>
       <option value="Test Bots">Test Bots</option>
     </select>
-    <button class="tbtn" id="btSortBtn" onclick="toggleBacktestSort()" title="Sorting by Net Profit"><i class="ri-sort-asc"></i><span id="btSortLabel">Net Profit</span></button>
+    <button class="tbtn" id="btSortBtn" onclick="toggleBacktestSort()" title="Sorting by Profit Factor"><i class="ri-sort-asc"></i><span id="btSortLabel">Profit Factor</span></button>
     <button class="tbtn" id="btExportBtn" onclick="exportBacktestCsv()" title="Export CSV"><i class="ri-download-2-line"></i></button>
     <button class="tbtn" id="btInfoBtn"><i class="ri-information-line"></i></button>
     <button class="bt-add-btn" id="btRefreshBtn" onclick="refreshBacktest(true)"><i class="ri-refresh-line"></i></button>
-    <div class="bt-info-popover" id="btInfoPopover">All backtests use a starting capital of £10,000. Results use OANDA data from Jan 2010 (2004 for VIX-based strategies). A result only passes the 8-point validator if it clears: (1) t-stat > 3.0, (2) minimum 100 trades, (3) Sharpe > 1.0 after costs, (4) holdout decay ratio ≥ 0.5 (out-of-sample performance vs in-sample), (5) at least 60% of walk-forward folds profitable, (6) max drawdown < 20%, (7) correlation to other deployed strategies < 0.5, (8) trading costs (swap/financing) subtracted. See the Validator column for each row's overall PASS/FAIL/INCOMPLETE status.</div>
+    <div class="bt-info-popover" id="btInfoPopover"><p>All backtests use a starting capital of £10,000. Results use OANDA data from Jan 2010 (2004 for VIX-based strategies). A result only passes the 8-point validator if it clears:</p><ol><li>t-stat &gt; 3.0</li><li>minimum 100 trades</li><li>Sharpe &gt; 1.0 after costs</li><li>holdout decay ratio ≥ 0.5 (out-of-sample performance vs in-sample)</li><li>at least 60% of walk-forward folds profitable</li><li>max drawdown &lt; 20%</li><li>correlation to other deployed strategies &lt; 0.5</li><li>trading costs (swap/financing) subtracted</li></ol><p>See the Validator column for each row's overall PASS/FAIL/INCOMPLETE status.</p><p>This table shows each market's (e.g. Crypto, Forex) top 50 rows across 5 metrics — Profit Factor, Net Profit, Sharpe, An. Return, Win Rate — combined, so the number shown per market is usually under 250 due to overlap. Rows outside this set aren't shown here, but the full backtest result still exists on disk.</p></div>
   </div>
 </div>
 
@@ -109,13 +109,13 @@
           <th class="col-num">Ind. 2</th>
           <th class="col-num">Ind. 3</th>
           <th class="col-num">Trades</th>
+          <th class="col-num">Profit Factor</th>
           <th class="col-num">Net Profit</th>
           <th class="col-num">Sharpe</th>
           <th class="col-num">An. Return</th>
           <th class="col-num">Win Rate</th>
           <th class="col-num">P&amp;L</th>
           <th class="col-num">Financing</th>
-          <th class="col-num">Profit Factor</th>
           <th class="col-num">Max Drawdown</th>
           <th class="col-text">Years</th>
           <th class="col-text">Date Run</th>
@@ -439,14 +439,15 @@ let btFilteredRows = [];
 let btVisibleCount = 0;
 let btColIx = null;
 let btSheetHeaders = [];
-const BT_SORT_CYCLE = ['netPnl', 'sharpe', 'ret', 'wr'];
+const BT_SORT_CYCLE = ['pf', 'netPnl', 'sharpe', 'ret', 'wr'];
 const BT_SORT_LABELS = {
+  pf: 'Profit Factor',
   netPnl: 'Net Profit',
   sharpe: 'Sharpe',
   ret: 'An. Return',
   wr: 'Win Rate',
 };
-let btSortBy = 'netPnl';
+let btSortBy = 'pf';
 
 function sizeMarketFilter() {
   const sel = document.getElementById('btMarketFilter');
@@ -471,8 +472,8 @@ function onMarketFilterChange() {
 function syncSortButton() {
   const btn = document.getElementById('btSortBtn');
   const label = document.getElementById('btSortLabel');
-  const sortLabel = BT_SORT_LABELS[btSortBy] || BT_SORT_LABELS.netPnl;
-  const active = btSortBy !== 'netPnl';
+  const sortLabel = BT_SORT_LABELS[btSortBy] || BT_SORT_LABELS.pf;
+  const active = btSortBy !== 'pf';
   if (label) label.textContent = sortLabel;
   if (btn) {
     btn.classList.toggle('active', active);
@@ -562,13 +563,13 @@ function backtestRowDisplay(r, i, headers, ix) {
     blank(ind2) ? '—' : ind2,
     blank(ind3) ? '—' : ind3,
     formatNumber(cell(r, ix.trades)),
+    cell(r, ix.pf) || '—',
     formatNetProfit(cell(r, ix.netPnl)),
     cell(r, ix.sharpe) || '—',
     formatPct(cell(r, ix.ret)),
     formatPct(cell(r, ix.wr)),
     formatUSD(cell(r, ix.tradePnl)),
     formatUSD(cell(r, ix.financing)),
-    cell(r, ix.pf) || '—',
     formatPct(cell(r, ix.dd)),
     cell(r, ix.years),
     cell(r, ix.dateRun) || '—',
@@ -611,13 +612,13 @@ function backtestRowHtml(r, i, headers, ix) {
         <td class="col-num bt-neutral">${blank(ind2) ? '—' : esc(ind2)}</td>
         <td class="col-num bt-neutral">${blank(ind3) ? '—' : esc(ind3)}</td>
         <td class="col-num bt-neutral">${formatNumber(cell(r, ix.trades))}</td>
+        <td class="col-num ${pfCls}">${esc(pf || '—')}</td>
         <td class="col-num ${numClass(netPnl)}">${formatNetProfit(netPnl)}</td>
         <td class="col-num ${shCls}">${esc(sharpe || '—')}</td>
         <td class="col-num ${numClass(ret)}">${formatPct(ret)}</td>
         <td class="col-num ${wrCls}">${formatPct(wr)}</td>
         <td class="col-num bt-neutral">${formatUSD(cell(r, ix.tradePnl))}</td>
         <td class="col-num bt-neutral">${formatUSD(cell(r, ix.financing))}</td>
-        <td class="col-num ${pfCls}">${esc(pf || '—')}</td>
         <td class="col-num ${ddClass(dd)}">${formatPct(dd)}</td>
         <td class="col-text bt-neutral">${esc(cell(r, ix.years))}</td>
         <td class="col-text bt-neutral">${esc(cell(r, ix.dateRun) || '—')}</td>
@@ -655,7 +656,7 @@ function renderRows(values) {
   const body = document.getElementById('btTableBody');
   const empty = document.getElementById('btEmpty');
   body.innerHTML = '';
-  const marketFilter = (document.getElementById('btMarketFilter') || {}).value || 'Forex';
+  const marketFilter = (document.getElementById('btMarketFilter') || {}).value || 'Crypto';
   let rows = (values || []).slice(1).filter(r => r && r.some(c => String(c).trim()));
   const headers = (values || [])[0] || [];
   const ix = backtestColIndex(headers);
@@ -1845,10 +1846,14 @@ function agentsMetricHtml(metric) {
   return text ? `<span class="agents-card-metric">${esc(text)}</span>` : '';
 }
 
-function agentsCardHtml(title, body, person, nameRole, whenRaw, badge, metric, showBody) {
+function agentsCardHtml(title, body, person, nameRole, whenRaw, badge, metric, showBody, logStampParts) {
   const id = agentsCardStore.length;
+  const stampParts = logStampParts || null;
+  const cardTitle = stampParts
+    ? [stampParts.time, stampParts.date].filter(Boolean).join(' ')
+    : title;
   agentsCardStore.push({
-    title,
+    title: cardTitle,
     body: body || 'No further detail.',
   });
   const badgeHtml = badge
@@ -1857,7 +1862,10 @@ function agentsCardHtml(title, body, person, nameRole, whenRaw, badge, metric, s
   const bodyHtml = showBody && body
     ? `<div class="agents-task-text">${String(body).split('\n').map(line => line.trim()).filter(Boolean).map(line => `<p>${esc(line)}</p>`).join('')}</div>`
     : '';
-  return `<div class="gcard" data-agents-card="${id}" role="button" tabindex="0">${agentsCornerHtml(person, nameRole)}${agentsTimeHtml(whenRaw)}${agentsMetricHtml(metric)}${badgeHtml}<div class="agents-task-title">${esc(title)}</div>${bodyHtml}</div>`;
+  const titleHtml = stampParts
+    ? agentsLogStampHtml(stampParts)
+    : `<div class="agents-task-title">${esc(title)}</div>`;
+  return `<div class="gcard" data-agents-card="${id}" role="button" tabindex="0">${agentsCornerHtml(person, nameRole)}${agentsTimeHtml(whenRaw)}${agentsMetricHtml(metric)}${badgeHtml}${titleHtml}${bodyHtml}</div>`;
 }
 
 function agentsCardsHtml(items, badgeFor) {
@@ -1907,11 +1915,22 @@ function agentsGroupLogEntries(entries) {
   return grouped;
 }
 
-function agentsLogStampTitle(card) {
+function agentsLogStampParts(card) {
   const raw = String(card.timestamp || '').trim();
   const match = raw.match(/(\d{4}-\d{2}-\d{2})[T ](\d{2}:\d{2})/);
-  if (match) return `${match[1]} ${match[2]}`;
-  return String(card.title || '').trim();
+  if (match) return { date: match[1], time: match[2] };
+  const title = String(card.title || '').trim();
+  const fromTitle = title.match(/^(\d{4}-\d{2}-\d{2})\s+(\d{2}:\d{2})/);
+  if (fromTitle) return { date: fromTitle[1], time: fromTitle[2] };
+  if (/^\d{4}-\d{2}-\d{2}$/.test(title)) return { date: title, time: '' };
+  return { date: '', time: title };
+}
+
+function agentsLogStampHtml(parts) {
+  if (!parts.date && !parts.time) return '<div class="agents-task-title">—</div>';
+  const timeLine = parts.time ? `<div class="agents-log-time">${esc(parts.time)}</div>` : '';
+  const dateLine = parts.date ? `<div class="agents-log-date">${esc(parts.date)}</div>` : '';
+  return `<div class="agents-log-stamp">${timeLine}${dateLine}</div>`;
 }
 
 function agentsLogHtml(entries) {
@@ -1919,7 +1938,7 @@ function agentsLogHtml(entries) {
   const cards = agentsGroupLogEntries(entries);
   if (!cards.length) return agentsEmptyHtml();
   return cards.sort((a, b) => (agentsCardTime(b.timestamp) - agentsCardTime(a.timestamp)) || (b.seq - a.seq)).map(card => {
-    return agentsCardHtml(agentsLogStampTitle(card), card.lines.join('\n'), person, person.role, card.timestamp, null, card.metric, true);
+    return agentsCardHtml('', card.lines.join('\n'), person, person.role, card.timestamp, null, card.metric, true, agentsLogStampParts(card));
   }).join('');
 }
 

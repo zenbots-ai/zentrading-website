@@ -55,7 +55,6 @@
       <option value="Commodities">Commodities</option>
       <option value="Equity">Equity</option>
       <option value="Crypto">Crypto</option>
-      <option value="Test Bots">Test Bots</option>
     </select>
     <button class="tbtn" id="btSortBtn" onclick="toggleBacktestSort()" title="Sorting by Net Profit"><i class="ri-sort-asc"></i><span id="btSortLabel">Net Profit</span></button>
     <button class="tbtn" id="btExportBtn" onclick="exportBacktestCsv()" title="Export CSV"><i class="ri-download-2-line"></i></button>
@@ -542,14 +541,8 @@ function renderRows(values) {
   let rows = (values || []).slice(1).filter(r => r && r.some(c => String(c).trim()));
   const headers = (values || [])[0] || [];
   const ix = backtestColIndex(headers);
-  const isTestBot = (r) => String(cell(r, ix.bot) || '').trim().endsWith('-TEST');
-  if (marketFilter === 'Test Bots') {
-    rows = rows.filter(isTestBot);
-  } else {
-    rows = rows.filter(r => !isTestBot(r));
-    if (marketFilter !== 'All Markets') {
-      rows = rows.filter(r => String(cell(r, ix.market)).trim() === marketFilter);
-    }
+  if (marketFilter !== 'All Markets') {
+    rows = rows.filter(r => String(cell(r, ix.market)).trim() === marketFilter);
   }
   const sortIx = ix[btSortBy] ?? ix.netPnl;
   rows.sort((a, b) => {
@@ -594,10 +587,9 @@ async function refreshBacktest(showLoader) {
 }
 
 const BOT_NAMES = [
-  '20-day-highs-bot','mean-reversion-bot-fx','crypto-bot','daily-ema-pullback-bot','crypto-24h-bot',
-  '10-20-bot','rsi-2-bot','momentum-factor-bot','equity-milipede-bot','bollinger-squeeze-bot',
-  'opening-range-bot','dual-momentum-bot','gap-and-go-bot','52-week-high-bot','vix-reversal-bot',
-  'earnings-drift-bot','carry-trade-bot','volatility-breakout-bot','trend-following-bot','pairs-trading-bot'
+  'mean-reversion-bot-fx','crypto-bot','crypto-24h-bot','equity-milipede-bot',
+  'vix-reversal-bot','carry-trade-bot','volatility-breakout-bot',
+  'pairs-trading-bot-fx','trend-following-bot-fx'
 ];
 
 const liveCharts = [];

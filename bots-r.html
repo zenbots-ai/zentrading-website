@@ -250,6 +250,96 @@ function validatorLabel(status) {
   return raw;
 }
 
+/* Display titles. Keys are the bot slugs stored on the sheets and in bot folders.
+   Values are the titles used on the task board and the Agents tab. */
+const STRATEGY_TITLES = {
+  'weekly-winner-continuation-long': 'Weekly Winner Continuation Long',
+  'k-bot-168h-winner-continuation-long': 'Weekly Winner Continuation Long',
+  'weekly-loser-bounce-long': 'Weekly Loser Bounce Long',
+  'k-bot-168h-loser-bounce-long': 'Weekly Loser Bounce Long',
+  'weekly-winner-fade-short': 'Weekly Winner Fade Short',
+  'spike-fade-short': 'Spike-Fade Short',
+  'ema-200-confirm-long': 'EMA-200 Confirm Long',
+  '126-day-momentum-long': '126-Day Momentum Long',
+  'highest-7-day-rsi-long': 'Highest 7-Day RSI Long',
+  'highest-7-day-rsi-short': 'Highest 7-Day RSI Short',
+  'monthly-high-breakout-long': 'Monthly High Breakout Long',
+  'alt-vs-xbt-zscore-laggard-long': 'Alt-vs-XBT Z-Score Laggard Long',
+  'alt-vs-xbt-zscore-leader-long': 'Alt-vs-XBT Z-Score Leader Long',
+  '20-day-closing-high-breakout-long': '20-Day Closing-High Breakout Long',
+  'repeat-champion-168h-continuation-long': 'Repeat-Champion 168h Continuation Long',
+  'non-spike-168h-winner-long': 'Non-Spike 168h Winner Long',
+  'second-rank-168h-continuation-long': 'Second-Rank 168h Continuation Long',
+  'quietest-24h-realized-vol-long': 'Quietest 24h Realized-Vol Long',
+  'bollinger-squeeze-breakout-long': 'Bollinger Squeeze Breakout Long',
+  '252-day-absolute-momentum-long': '252-Day Absolute Momentum Long',
+  '52-week-closing-high-long': '52-Week Closing-High Long',
+  'rsi-2-uptrend-dip-long': 'RSI(2) Uptrend Dip Long',
+  'rsi2-uptrend-dip-long': 'RSI(2) Uptrend Dip Long',
+  '200-day-average-regime-long': '200-Day Average Regime Long',
+  'sma-20-50-cross-long': 'SMA 20/50 Cross Long',
+  'flat-5-day-range-long': 'Flat 5-Day Range Long',
+  'donchian-20-channel-long': 'Donchian 20 Channel Long',
+  'rising-ema-200-buffer-long': 'Rising EMA-200 Buffer Long',
+  'ema200-touch-long': 'EMA200 Touch Long',
+  'ema-200-touch-long': 'EMA200 Touch Long',
+  'staircase-20-day-high-long': 'Staircase 20-Day High Long',
+  'k-bot-24h': '24h Smooth Gainer',
+  'k-bot-6h': '6h Smooth Gainer',
+  'k-bot-24': '24h Smooth Gainer',
+  'k-bot-1h': '1h Smooth Gainer',
+};
+
+const STRATEGY_ACRONYM = { rsi: 'RSI', ema: 'EMA', sma: 'SMA', fx: 'FX', vix: 'VIX', xbt: 'XBT', ma: 'MA', atr: 'ATR' };
+const STRATEGY_SMALL = { and: 'and', vs: 'vs', of: 'of' };
+
+function strategyToken(part) {
+  const low = String(part || '').toLowerCase();
+  if (STRATEGY_ACRONYM[low]) return STRATEGY_ACRONYM[low];
+  if (STRATEGY_SMALL[low]) return STRATEGY_SMALL[low];
+  if (/^\d+[a-z]+$/i.test(part)) return low;
+  return part.charAt(0).toUpperCase() + part.slice(1).toLowerCase();
+}
+
+function strategyTitleFromSlug(slug) {
+  const rawParts = String(slug || '').split('-').filter(part => part && part.toLowerCase() !== 'bot');
+  const parts = [];
+  for (let i = 0; i < rawParts.length; i++) {
+    const part = rawParts[i];
+    const next = rawParts[i + 1];
+    if (/^\d+$/.test(part) && next && /^\d+$/.test(next)) {
+      parts.push(part + '-' + next);
+      i++;
+      continue;
+    }
+    if (/^\d+$/.test(part) && next && /^(day|days|week|weeks|hour|hours)$/i.test(next)) {
+      parts.push(part + '-' + strategyToken(next));
+      i++;
+      continue;
+    }
+    if (STRATEGY_ACRONYM[part.toLowerCase()] && next && /^\d+$/.test(next)) {
+      parts.push(STRATEGY_ACRONYM[part.toLowerCase()] + '-' + next);
+      i++;
+      continue;
+    }
+    parts.push(strategyToken(part));
+  }
+  return parts.join(' ');
+}
+
+function strategyTitle(raw) {
+  const original = String(raw || '').trim();
+  if (!original || /\s/.test(original)) return original;
+  let slug = original.toLowerCase();
+  let test = false;
+  if (slug.endsWith('-test')) {
+    test = true;
+    slug = slug.slice(0, -5);
+  }
+  const title = STRATEGY_TITLES[slug] || strategyTitleFromSlug(slug);
+  return test ? title + ' Test' : title;
+}
+
 function colIndex(headers, ...names) {
   const lower = (headers || []).map(h => String(h || '').trim().toLowerCase());
   for (const name of names) {
@@ -461,7 +551,7 @@ function backtestRowDisplay(r, i, headers, ix) {
   const ind3 = cell(r, ix.ind3);
   return [
     String(i + 1),
-    cell(r, ix.bot),
+    strategyTitle(cell(r, ix.bot)),
     validatorLabel(validator),
     cell(r, ix.asset) || '—',
     cell(r, ix.market) || '—',
@@ -510,7 +600,7 @@ function backtestRowHtml(r, i, headers, ix) {
   return `
       <tr>
         <td class="col-num col-ref" style="color:#999999;font-size:11px">${i + 1}</td>
-        <td class="col-text"><div class="bt-bot-name">${esc(bot)}</div></td>
+        <td class="col-text"><div class="bt-bot-name">${esc(strategyTitle(bot))}</div></td>
         <td class="col-text col-status"><span class="bt-status-badge ${validatorBadgeClass(validator)}">${esc(validatorLabel(validator))}</span></td>
         <td class="col-text bt-neutral">${esc(cell(r, ix.asset) || '—')}</td>
         <td class="col-text bt-neutral">${esc(cell(r, ix.market) || '—')}</td>
@@ -672,7 +762,7 @@ function renderLiveDashboard() {
   grid.innerHTML = names.map((id, i) => `
     <div class="bot-card">
       <div class="bot-header">
-        <div class="bot-name">${id}</div>
+        <div class="bot-name">${esc(strategyTitle(id))}</div>
         <div class="hright">
           <span class="status stopped">Stopped</span>
           <button class="tbl-icon" onclick="openTrades(${i})" aria-label="Trades">
@@ -738,7 +828,7 @@ function toggleSort() {
 }
 
 function openTrades(i) {
-  document.getElementById('popoverTitle').textContent = BOT_NAMES[i];
+  document.getElementById('popoverTitle').textContent = strategyTitle(BOT_NAMES[i]);
   document.getElementById('popoverBody').innerHTML = `
     <table>
       <tr class="hdr"><td>Time</td><td>Side</td><td>P&amp;L</td></tr>
@@ -1060,7 +1150,7 @@ function paperRenderSessions() {
 function paperRenderSwitch() {
   const el = document.getElementById('paperBotSwitch');
   if (!el) return;
-  const pills = [{ id: 'all', label: 'All bots' }, ...PAPER_BOTS.map(b => ({ id: b.id, label: b.id }))];
+  const pills = [{ id: 'all', label: 'All bots' }, ...PAPER_BOTS.map(b => ({ id: b.id, label: strategyTitle(b.id) }))];
   el.innerHTML = pills.map(p => `
     <button type="button" class="tbtn paper-bot-pill${paperSelectedBot === p.id ? ' active' : ''}" data-paper-bot="${p.id}">${esc(p.label)}</button>
   `).join('');
@@ -1106,7 +1196,7 @@ function paperRiskPanel(bot) {
       <div class="paper-risk-head">
         <div>
           <div class="paper-kicker">Risk status</div>
-          <h3 class="paper-risk-title">${esc(bot.id)}</h3>
+          <h3 class="paper-risk-title">${esc(strategyTitle(bot.id))}</h3>
         </div>
         <div class="paper-risk-actions">
           <span class="bt-status-badge ${halted ? 'fail' : 'running'}">${halted ? 'HALTED' : 'RUNNING'}</span>
@@ -1140,7 +1230,7 @@ function paperRiskCard(bot) {
   return `
     <button type="button" class="paper-risk-card" data-paper-bot="${bot.id}">
       <div class="paper-risk-card-head">
-        <span class="paper-risk-card-name">${esc(bot.id)}</span>
+        <span class="paper-risk-card-name">${esc(strategyTitle(bot.id))}</span>
         <span class="bt-status-badge ${halted ? 'fail' : 'running'}">${halted ? 'HALTED' : 'RUNNING'}</span>
       </div>
       <div class="paper-risk-card-equity ${dayPnl >= 0 ? 'bt-pos' : 'bt-neg'}">${paperMoney(bot.equity)}</div>
@@ -1183,7 +1273,7 @@ function paperRow(bot, pos) {
   const sideCls = pos.side === 'Long' ? 'long' : 'short';
   return `
     <tr>
-      ${showBot ? `<td class="col-text"><div class="bt-bot-name">${esc(bot.id)}</div></td>` : ''}
+      ${showBot ? `<td class="col-text"><div class="bt-bot-name">${esc(strategyTitle(bot.id))}</div></td>` : ''}
       <td class="col-text bt-neutral">${esc(pos.symbol)}</td>
       <td class="col-text"><span class="paper-side ${sideCls}">${pos.side}</span></td>
       <td class="col-num bt-neutral">${paperQty(pos.qty)}</td>
@@ -1388,7 +1478,7 @@ function screenerRowHtml(s) {
   }).join('');
   return `
     <tr class="sc-row" data-sc-id="${esc(s.id)}">
-      <td class="col-text sc-col-bot"><div class="bt-bot-name">${esc(s.name)}</div></td>
+      <td class="col-text sc-col-bot"><div class="bt-bot-name">${esc(strategyTitle(s.name))}</div></td>
       ${cells}
     </tr>
   `;
@@ -1492,7 +1582,7 @@ function openScreenerDetail(id) {
   if (s.source) {
     sections.push(`<div class="sc-pop-kicker">Notes</div><div class="sc-pop-body">${esc(s.source)}</div>`);
   }
-  document.getElementById('popoverTitle').textContent = s.name;
+  document.getElementById('popoverTitle').textContent = strategyTitle(s.name);
   document.getElementById('popoverBody').innerHTML = sections.join('') || '<div class="sc-pop-body">No notes yet.</div>';
   document.getElementById('scInfoPopover')?.classList.remove('visible');
   document.getElementById('popoverOverlay').classList.add('visible');

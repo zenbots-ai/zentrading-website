@@ -172,12 +172,12 @@
     <div class="top-row" id="agentsStatus"></div>
     <div class="agents-board">
       <section class="agents-col">
-        <h2 class="agents-heading">Log</h2>
-        <div class="agents-list" id="agentsLog"></div>
-      </section>
-      <section class="agents-col">
         <h2 class="agents-heading">Trade Ideas</h2>
         <div class="agents-list" id="agentsBacklog"></div>
+      </section>
+      <section class="agents-col">
+        <h2 class="agents-heading">Log</h2>
+        <div class="agents-list" id="agentsLog"></div>
       </section>
       <section class="agents-col agents-col-done">
         <h2 class="agents-heading">Done</h2>
@@ -1832,7 +1832,16 @@ function initAgentsCards() {
   });
 }
 
-function renderAgentsStatus(content) {
+function agentsReadyForPaper(item) {
+  const text = String(item && item.text || '');
+  const qaPass = /\bQA Pass\b/i.test(text) || /\bQA:\s*Pass\b/i.test(text);
+  const barMet = /meets the minimum(?: validated)? bar/i.test(text);
+  const barFailed = /does not meet(?: the)? validated bar/i.test(text);
+  const waitingPaper = /paper (?:only|trading|answer|ask)/i.test(text);
+  return qaPass && barMet && waitingPaper && !barFailed;
+}
+
+function renderAgentsStatus(content, paperReady) {
   const el = document.getElementById('agentsStatus');
   if (!el) return;
   const text = String(content || '').trim();
@@ -1841,11 +1850,14 @@ function renderAgentsStatus(content) {
     const label = (idx >= 0 ? part.slice(0, idx) : part).trim().toLowerCase();
     return label === 'model' || label.startsWith('runs today');
   });
+  const paperCard = paperReady == null
+    ? ''
+    : `<div class="gcard"><div class="label">Ready for paper trade</div><div class="value pos">${esc(String(paperReady))}</div></div>`;
   if (!parts.length) {
-    el.innerHTML = '<div class="gcard"><div class="label">Status</div><div class="value">No data yet</div></div>';
+    el.innerHTML = paperCard || '<div class="gcard"><div class="label">Status</div><div class="value">No data yet</div></div>';
     return;
   }
-  el.innerHTML = parts.map(part => {
+  el.innerHTML = paperCard + parts.map(part => {
     const idx = part.indexOf(':');
     const label = idx >= 0 ? part.slice(0, idx).trim() : 'Status';
     const value = idx >= 0 ? part.slice(idx + 1).trim() : part;
@@ -1892,10 +1904,13 @@ async function refreshAgents() {
         .concat(grouped.backlog.map(item => ({ ...item, section: 'backlog' })))
     );
     const doneItems = agentsSortByTime(grouped.done, item => item.timestamp);
-    renderAgentsStatus(status);
+    const paperReady = backlogItems.concat(doneItems).filter(agentsReadyForPaper).length;
+    renderAgentsStatus(status, paperReady);
     document.getElementById('agentsBacklog').innerHTML = agentsCardsHtml(
       backlogItems,
-      (item) => agentsSectionBadge(item.section)
+      (item) => (item.section === 'in progress' && agentsReadyForPaper(item))
+        ? { label: 'Ready for paper trade', cls: 'paper-ready' }
+        : agentsSectionBadge(item.section)
     );
     document.getElementById('agentsDone').innerHTML = agentsCardsHtml(
       doneItems,

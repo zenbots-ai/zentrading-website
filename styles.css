@@ -2122,6 +2122,10 @@ body:has(.nav) {
   background: rgba(156,240,250,0.15);
   color: #9CF0FA;
 }
+.bt-status-badge.paper-ready {
+  background: rgba(9,251,157,0.15);
+  color: #09FB9D;
+}
 .bt-status-badge.fail {
   background: rgba(255,109,70,0.15);
   color: #FF6D46;
@@ -2952,7 +2956,7 @@ body:has(.nav) {
   display: none;
 }
 #tab-agents .top-row {
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: repeat(3, 1fr);
 }
 #tab-agents .agents-col {
   min-width: 0;
@@ -2975,6 +2979,9 @@ body:has(.nav) {
 }
 #tab-agents #agentsBacklog .gcard:has(.bt-status-badge.in-progress) {
   border: 1px solid #9CF0FA;
+}
+#tab-agents #agentsBacklog .gcard:has(.bt-status-badge.paper-ready) {
+  border: 1px solid #09FB9D;
 }
 #tab-agents .agents-card-corner {
   position: absolute;
@@ -3094,6 +3101,9 @@ body:has(.nav) {
 }
 #tab-agents .gcard .value {
   font-size: 18px;
+}
+#tab-agents .gcard .value.pos {
+  color: #09FB9D;
 }
 @media (max-width: 700px) {
   #tab-agents .agents-board {

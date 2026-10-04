@@ -1803,6 +1803,21 @@ function agentsTimeHtml(whenRaw) {
   return time ? `<span class="agents-card-date">${esc(time)}</span>` : '';
 }
 
+function agentsItemMarket(item) {
+  const text = `${item && item.title || ''}\n${item && item.text || ''}`;
+  const match = text.match(/\bmarket=([A-Za-z]+)/i);
+  if (!match) return '';
+  const known = { crypto: 'Crypto', forex: 'Forex', equity: 'Equity', etf: 'ETF', indices: 'Indices', commodities: 'Commodities' };
+  return known[match[1].toLowerCase()] || match[1];
+}
+
+function agentsTradeMetric(item) {
+  const metric = String(item && item.metric || '').trim();
+  const market = agentsItemMarket(item);
+  if (market && /^(long|short)$/i.test(metric)) return `${market}: ${metric}`;
+  return metric;
+}
+
 function agentsMetricHtml(metric) {
   const text = String(metric || '').trim();
   return text ? `<span class="agents-card-metric">${esc(text)}</span>` : '';
@@ -1997,7 +2012,7 @@ async function refreshAgents() {
     const paperReady = backlogItems.concat(doneItems).filter(agentsReadyForPaper).length;
     renderAgentsStatus(status, paperReady);
     document.getElementById('agentsBacklog').innerHTML = agentsCardsHtml(
-      backlogItems,
+      backlogItems.map(item => ({ ...item, metric: agentsTradeMetric(item) })),
       (item) => (item.section === 'in progress' && agentsReadyForPaper(item))
         ? { label: 'Ready for paper trade', cls: 'paper-ready' }
         : agentsSectionBadge(item.section)

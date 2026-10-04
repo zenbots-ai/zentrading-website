@@ -1811,11 +1811,33 @@ function agentsItemMarket(item) {
   return known[match[1].toLowerCase()] || match[1];
 }
 
+function agentsLeanProfitFactor(item) {
+  const text = String(item && item.text || '');
+  const lines = text.split(/\n/);
+  const stat = /^-?\s*(?:Total Orders|Win Rate|Loss Rate|Average Win|Average Loss|Profit-Loss Ratio|Net Profit|An\. Return|Compounding Annual Return|Sharpe|Sortino|Max Drawdown|Profit Factor|Total Fees|Largest|Open at|In-sample|Holdout)\b/i;
+  for (let i = 0; i < lines.length; i++) {
+    if (!/REAL RESULT\b/i.test(lines[i])) continue;
+    const chunk = [lines[i]];
+    for (let j = i + 1; j < lines.length; j++) {
+      const nxt = lines[j].trim();
+      if (!stat.test(nxt)) break;
+      chunk.push(nxt);
+    }
+    const match = chunk.join('\n').match(/Profit Factor:\s*([+-]?\d+(?:\.\d+)?)/i);
+    return match ? match[1] : '';
+  }
+  return '';
+}
+
 function agentsTradeMetric(item) {
   const metric = String(item && item.metric || '').trim();
   const market = agentsItemMarket(item);
-  if (market && /^(long|short)$/i.test(metric)) return `${market}: ${metric}`;
-  return metric;
+  const label = market && /^(long|short)$/i.test(metric) ? `${market}: ${metric}` : metric;
+  const paper = String(item && item.section || '') === 'in progress' && agentsReadyForPaper(item);
+  if (!paper || !label) return label;
+  const pf = agentsLeanProfitFactor(item);
+  if (!pf) return label;
+  return `${label}, PF ${pf}`;
 }
 
 function agentsMetricHtml(metric) {
